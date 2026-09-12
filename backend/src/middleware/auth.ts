@@ -64,3 +64,28 @@ export const authenticate = (
     });
   }
 };
+
+/**
+ * Role-based authorization middleware.
+ * Ensures the authenticated user has one of the allowed roles.
+ */
+export const requireRole = (...allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required.' },
+      });
+      return;
+    }
+    if (!allowedRoles.includes(user.role)) {
+      res.status(403).json({
+        success: false,
+        error: { message: 'Access forbidden. Insufficient permissions.' },
+      });
+      return;
+    }
+    next();
+  };
+};

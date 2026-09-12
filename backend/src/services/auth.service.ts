@@ -190,8 +190,12 @@ export const refreshSession = async (
     throw err;
   }
 
-  // 3. Check revoked
+  // 3. Check revoked — Replay attack detection: Revoke entire token family
   if (storedToken.isRevoked) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: storedToken.userId },
+      data: { isRevoked: true },
+    });
     const err = new Error('Refresh token has been revoked') as Error & { statusCode: number };
     err.statusCode = 401;
     throw err;

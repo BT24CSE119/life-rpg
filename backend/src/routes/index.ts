@@ -11,6 +11,7 @@ import shopRouter from './shop';
 import inventoryRouter from './inventory';
 import notificationRouter from './notification';
 import eventsRouter from './events';
+import adminRouter from './admin';
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use('/shop', shopRouter);
 router.use('/inventory', inventoryRouter);
 router.use('/notifications', notificationRouter);
 router.use('/events', eventsRouter);
+router.use('/admin', adminRouter);
 
 export default router;

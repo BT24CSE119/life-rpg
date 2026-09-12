@@ -13,7 +13,10 @@ export const errorHandler = (
   _next: NextFunction
 ): void => {
   const statusCode = err.statusCode ?? 500;
-  const message = err.message ?? 'Internal Server Error';
+  const message =
+    statusCode === 500 && process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : (err.message ?? 'Internal Server Error');
 
   console.error(`[Error] ${statusCode} — ${message}`);
   if (process.env.NODE_ENV === 'development' && err.stack) {

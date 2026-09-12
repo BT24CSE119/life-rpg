@@ -361,7 +361,7 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       const outcome = await runCompletion();
       if (!outcome.duplicateCompletion) {
@@ -387,7 +387,14 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
       }
       return outcome;
     } catch (error) {
-      if ((error as { code?: string }).code !== 'P2034' || attempt === 2) throw error;
+      const err = error as { code?: string; message?: string };
+      const isConflict =
+        err.code === 'P2034' ||
+        err.code === 'P2028' ||
+        err.message?.includes('write conflict') ||
+        err.message?.includes('deadlock');
+      if (!isConflict || attempt === 4) throw error;
+      await new Promise((r) => setTimeout(r, 20 * (attempt + 1)));
     }
   }
   throw new Error('Quest completion could not be finalized');
