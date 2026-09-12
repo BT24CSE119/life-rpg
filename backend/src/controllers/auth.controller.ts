@@ -22,7 +22,7 @@ const REFRESH_COOKIE_NAME = 'refresh_token';
 const refreshCookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
-  sameSite: (env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
+  sameSite: (env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
   path: '/',                         // Root path so cookie is reliably persisted and sent across reverse proxies/browsers
   maxAge: 90 * 24 * 60 * 60 * 1000,  // 90 days persistent session until manual logout
 };
@@ -30,7 +30,7 @@ const refreshCookieOptions = {
 const clearCookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
-  sameSite: (env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
+  sameSite: (env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
   path: '/',
 };
 

@@ -26,7 +26,28 @@ const createApp = (): Application => {
   // ── CORS & Parsing ────────────────────────────────────────────────────────
   app.use(
     cors({
-      origin: env.FRONTEND_URL,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+
+        // Allowed static origins
+        const allowedOrigins = [
+          env.FRONTEND_URL,
+          'https://life-rpg07.vercel.app',
+          'http://localhost:5173',
+          'http://localhost:3000',
+        ];
+
+        if (
+          allowedOrigins.includes(origin) ||
+          origin.endsWith('.vercel.app') ||
+          origin.includes('localhost')
+        ) {
+          return callback(null, true);
+        }
+
+        return callback(new Error(`Not allowed by CORS: ${origin}`));
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
