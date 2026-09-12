@@ -1,6 +1,9 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import apiRouter from './routes';
 import { errorHandler } from './middleware/errorHandler';
@@ -9,7 +12,18 @@ import { notFound } from './middleware/notFound';
 const createApp = (): Application => {
   const app = express();
 
-  // ── Security & Parsing ─────────────────────────────────────────────────────
+  // ── Production Security Headers (Helmet) ──────────────────────────────────
+  app.use(
+    helmet({
+      contentSecurityPolicy: env.NODE_ENV === 'production' ? undefined : false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
+
+  // ── High-Performance Response Compression (Gzip) ───────────────────────────
+  app.use(compression());
+
+  // ── CORS & Parsing ────────────────────────────────────────────────────────
   app.use(
     cors({
       origin: env.FRONTEND_URL,
@@ -18,14 +32,48 @@ const createApp = (): Application => {
       allowedHeaders: ['Content-Type', 'Authorization'],
     })
   );
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   app.use(cookieParser());
+
+  // ── Rate Limiting (Security Hardening) ─────────────────────────────────────
+  if (env.NODE_ENV !== 'test') {
+    // General API rate limiter
+    const generalLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 600, // Limit each IP to 600 requests per window
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: {
+        success: false,
+        error: 'Too many requests from this IP, please try again after 15 minutes.',
+      },
+    });
+
+    // Stricter limiter for authentication actions
+    const authLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 40,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: {
+        success: false,
+        error: 'Too many authentication attempts, please try again after 15 minutes.',
+      },
+    });
+
+    app.use('/api/', generalLimiter);
+    app.use('/api/auth/login', authLimiter);
+    app.use('/api/auth/signup', authLimiter);
+  }
 
   // ── Request Logging (development) ──────────────────────────────────────────
   if (env.NODE_ENV === 'development') {
     app.use((req, _res, next) => {
-      console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+      // Don't clutter logs with SSE heartbeat or frequent health checks
+      if (req.path !== '/api/events' && req.path !== '/api/health') {
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+      }
       next();
     });
   }

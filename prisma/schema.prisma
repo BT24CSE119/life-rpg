@@ -187,7 +187,7 @@ model DailyQuest {
   xpReward    Int             @default(30)
   goldReward  Int             @default(15)
   status      QuestStatus     @default(TODO)
-  date        String          // Format: YYYY-MM-DD
+  date        String // Format: YYYY-MM-DD
   completedAt DateTime?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -279,6 +279,7 @@ model Item {
 
   @@index([type])
   @@index([rarity])
+  @@index([isActive])
   @@map("items")
 }
 
@@ -295,6 +296,7 @@ model Inventory {
 
   @@unique([userId, itemId])
   @@index([userId])
+  @@index([userId, isEquipped])
   @@map("inventory")
 }
 

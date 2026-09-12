@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { LogAction, Prisma } from '@prisma/client';
+import { realtimeService } from './realtime.service';
 
 export const getUserInventory = async (userId: string) => {
   const items = await prisma.inventory.findMany({
@@ -14,7 +15,7 @@ export const getUserInventory = async (userId: string) => {
 };
 
 export const equipItem = async (userId: string, itemId: string) => {
-  return prisma.$transaction(
+  const outcome = await prisma.$transaction(
     async (tx) => {
       const inventoryEntry = await tx.inventory.findUnique({
         where: {
@@ -67,10 +68,18 @@ export const equipItem = async (userId: string, itemId: string) => {
         },
       });
 
-      return updated;
+      const result = updated;
+      return result;
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );
+
+  realtimeService.emitUserEvent(userId, 'ITEM_EQUIPPED', {
+    itemId,
+    item: outcome.item,
+  });
+
+  return outcome;
 };
 
 export const unequipItem = async (userId: string, itemId: string) => {
@@ -102,6 +111,11 @@ export const unequipItem = async (userId: string, itemId: string) => {
       action: LogAction.ITEM_UNEQUIPPED,
       metadata: { itemId, name: inventoryEntry.item.name },
     },
+  });
+
+  realtimeService.emitUserEvent(userId, 'ITEM_UNEQUIPPED', {
+    itemId,
+    item: updated.item,
   });
 
   return updated;

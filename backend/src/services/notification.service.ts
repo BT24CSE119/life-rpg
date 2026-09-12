@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { NotificationType, Prisma } from '@prisma/client';
+import { realtimeService } from './realtime.service';
 
 export const createNotification = async (
   userId: string,
@@ -10,7 +11,7 @@ export const createNotification = async (
   tx?: Prisma.TransactionClient
 ) => {
   const client = tx || prisma;
-  return client.notification.create({
+  const notification = await client.notification.create({
     data: {
       userId,
       type,
@@ -19,6 +20,11 @@ export const createNotification = async (
       metadata: metadata ? (metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
     },
   });
+
+  // Emit real-time notification push event
+  realtimeService.emitUserEvent(userId, 'NOTIFICATION_CREATED', { notification });
+
+  return notification;
 };
 
 export const getNotifications = async (userId: string, page = 1, limit = 20) => {

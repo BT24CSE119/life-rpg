@@ -10,6 +10,7 @@ import achievementRouter from './achievement';
 import shopRouter from './shop';
 import inventoryRouter from './inventory';
 import notificationRouter from './notification';
+import eventsRouter from './events';
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use('/achievements', achievementRouter);
 router.use('/shop', shopRouter);
 router.use('/inventory', inventoryRouter);
 router.use('/notifications', notificationRouter);
+router.use('/events', eventsRouter);
 
 export default router;

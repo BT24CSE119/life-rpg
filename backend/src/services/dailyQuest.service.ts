@@ -14,6 +14,7 @@ import { getOrCreateProfile } from './rpg.service';
 import { recordProductiveDay } from './streak.service';
 import { checkAndUnlockAchievements } from './achievement.service';
 import { createNotification } from './notification.service';
+import { realtimeService } from './realtime.service';
 
 export const DAILY_TEMPLATES = [
   {
@@ -244,6 +245,27 @@ export const completeDailyQuest = async (userId: string, dailyQuestId: string) =
   if (!result.duplicateCompletion) {
     const unlocked = await checkAndUnlockAchievements(userId).catch(() => []);
     result.unlockedAchievements = unlocked;
+
+    realtimeService.emitUserEvent(userId, 'DAILY_QUEST_COMPLETED', {
+      dailyQuestId,
+      reward: result.reward,
+      progression: result.progression,
+      streak: result.streak,
+    });
+    realtimeService.emitUserEvent(userId, 'XP_GAINED', {
+      amount: result.reward.xpAwarded,
+      totalXp: result.progression.totalXp,
+      goldBalance: result.progression.goldBalance,
+    });
+    realtimeService.emitUserEvent(userId, 'GOLD_GAINED', {
+      amount: result.reward.goldAwarded,
+      goldBalance: result.progression.goldBalance,
+    });
+    if (result.progression.levelUp) {
+      realtimeService.emitUserEvent(userId, 'LEVEL_UP', {
+        newLevel: result.progression.newLevel,
+      });
+    }
   }
 
   return result;

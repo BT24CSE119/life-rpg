@@ -6,6 +6,7 @@ import { DEFAULT_PROFILE, PROFILE_SELECT } from './rpg.service';
 import { recordProductiveDay } from './streak.service';
 import { checkAndUnlockAchievements } from './achievement.service';
 import { createNotification } from './notification.service';
+import { realtimeService } from './realtime.service';
 
 // ── Validation Schemas ────────────────────────────────────────────────────────
 
@@ -361,8 +362,31 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    try { return await runCompletion(); }
-    catch (error) {
+    try {
+      const outcome = await runCompletion();
+      if (!outcome.duplicateCompletion) {
+        realtimeService.emitUserEvent(userId, 'QUEST_COMPLETED', {
+          questId,
+          reward: outcome.reward,
+          progression: outcome.progression,
+        });
+        realtimeService.emitUserEvent(userId, 'XP_GAINED', {
+          amount: outcome.reward.xpAwarded,
+          totalXp: outcome.progression.totalXp,
+          goldBalance: outcome.progression.goldBalance,
+        });
+        realtimeService.emitUserEvent(userId, 'GOLD_GAINED', {
+          amount: outcome.reward.goldAwarded,
+          goldBalance: outcome.progression.goldBalance,
+        });
+        if (outcome.progression.levelUp) {
+          realtimeService.emitUserEvent(userId, 'LEVEL_UP', {
+            newLevel: outcome.progression.newLevel,
+          });
+        }
+      }
+      return outcome;
+    } catch (error) {
       if ((error as { code?: string }).code !== 'P2034' || attempt === 2) throw error;
     }
   }

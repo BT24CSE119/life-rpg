@@ -13,6 +13,8 @@ import AchievementsPreviewCard from '../components/AchievementsPreviewCard';
 import QuestFormModal from '../components/QuestFormModal';
 import LevelUpModal from '../components/LevelUpModal';
 import FloatingReward, { FloatingRewardItem } from '../components/FloatingReward';
+import FloatingRpgCore from '../components/FloatingRpgCore';
+import { useRpg } from '../context/RpgContext';
 import { getDashboardData } from '../services/dashboard';
 import { createQuest, completeQuest } from '../services/quest';
 import { completeDailyQuest } from '../services/dailyQuest';
@@ -53,6 +55,7 @@ const getGreetingLore = (level: number): { title: string; quote: string } => {
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { syncFromDashboard } = useRpg();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,12 +95,13 @@ const DashboardPage: React.FC = () => {
     try {
       const dashboard = await getDashboardData();
       setData(dashboard);
+      syncFromDashboard(dashboard);
     } catch (err) {
       setError((err as Error).message || 'Failed to load dashboard.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [syncFromDashboard]);
 
   useEffect(() => {
     fetchDashboard();
@@ -264,80 +268,90 @@ const DashboardPage: React.FC = () => {
           </div>
         ) : data ? (
           <div className="space-y-6 animate-fade-in">
-            {/* ── 1. Personalized Hero Header ───────────────────────────────── */}
-            <header className={`relative bg-gradient-to-r from-rpg-surface via-rpg-surface-2/60 to-rpg-surface border rounded-xl p-6 sm:p-7 shadow-sm overflow-hidden transition-all ${
-              equippedFrame ? 'border-amber-500/60 shadow-[0_0_20px_rgba(245,200,66,0.15)]' : 'border-rpg-border'
+            {/* ── 1. Futuristic Hero Header with 3D Command Core ─────────────────── */}
+            <header className={`relative glass-futuristic p-6 sm:p-8 overflow-hidden transition-all ${
+              equippedFrame ? 'border-amber-500/60 shadow-[0_0_30px_rgba(245,200,66,0.18)]' : 'border-white/10'
             }`}>
-              {/* Background ambient rune effect */}
+              {/* Background ambient neon radial glows */}
               <div
-                className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-amber-500/5 to-transparent pointer-events-none"
+                className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-purple-600/15 blur-3xl pointer-events-none"
+                aria-hidden="true"
+              />
+              <div
+                className="absolute -bottom-24 right-1/4 w-96 h-96 rounded-full bg-cyan-600/15 blur-3xl pointer-events-none"
                 aria-hidden="true"
               />
 
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-950/60 text-amber-300 border border-amber-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" aria-hidden="true" />
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-amber-950/70 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,200,66,0.2)]">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" aria-hidden="true" />
                       {equippedTitle || lore?.title}
                     </span>
                     {equippedFrame && (
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-950/60 text-purple-300 border border-purple-500/30">
+                      <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-purple-950/70 text-purple-300 border border-purple-500/40">
                         {equippedFrame.iconEmoji} {equippedFrame.name}
                       </span>
                     )}
-                    <span className="text-xs text-rpg-text-faint">
-                      Kingdom of Life RPG
+                    <span className="text-xs font-mono text-cyan-400/80 bg-cyan-950/40 border border-cyan-500/20 px-2 py-0.5 rounded-full">
+                      Realm Protocol Active
                     </span>
                   </div>
 
-                  <h1 className="font-display text-3xl sm:text-4xl font-black text-rpg-text tracking-tight">
+                  <h1 className="font-display text-3xl sm:text-4xl font-black text-rpg-text tracking-tight leading-tight">
                     Welcome back, <span className="text-gold-gradient">{data.player.name}</span>
                   </h1>
 
-                  <p className="text-xs sm:text-sm text-rpg-text-muted mt-1.5 max-w-xl leading-relaxed italic">
+                  <p className="text-xs sm:text-sm text-rpg-text-muted mt-2 max-w-xl leading-relaxed italic">
                     “{lore?.quote}”
                   </p>
 
-                  <div className="flex items-center gap-3 mt-3 text-xs text-rpg-text-muted flex-wrap font-medium">
-                    <span className="text-rpg-text font-bold flex items-center gap-1">
+                  <div className="flex items-center gap-3 mt-4 text-xs text-rpg-text-muted flex-wrap font-medium">
+                    <span className="text-rpg-text font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
                       <span aria-hidden="true">🎖️</span> Level {data.player.level}
                     </span>
-                    <span>·</span>
-                    <span className="text-amber-300 font-semibold flex items-center gap-1">
+                    <span className="text-amber-300 font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-950/30 border border-amber-500/20">
                       <span aria-hidden="true">⚔️</span> {data.quests.active} Active Quest{data.quests.active !== 1 ? 's' : ''}
                     </span>
-                    <span>·</span>
-                    <span className="text-orange-400 font-semibold flex items-center gap-1">
+                    <span className="text-orange-400 font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-950/30 border border-orange-500/20">
                       <span aria-hidden="true">🔥</span> {data.streak?.currentStreak ?? 0}-Day Streak
                     </span>
-                    <span>·</span>
-                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/30 border border-emerald-500/20">
                       <span aria-hidden="true">🏆</span> {data.quests.completed} Fulfilled
                     </span>
                   </div>
+
+                  {/* Quick Actions Header */}
+                  <div className="flex items-center gap-3 mt-6 flex-wrap">
+                    <button
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold font-display uppercase tracking-wider bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 shadow-[0_0_20px_rgba(245,200,66,0.3)] active:scale-95 transition-all"
+                    >
+                      <span aria-hidden="true">➕</span> New Quest
+                    </button>
+                    <Link
+                      to="/shop"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-rpg-surface-2 border border-amber-500/30 hover:border-amber-400 text-amber-300 hover:brightness-110 active:scale-95 transition-all"
+                    >
+                      <span aria-hidden="true">🪙</span> Guild Shop
+                    </Link>
+                    <Link
+                      to="/inventory"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-rpg-surface-2 border border-white/10 hover:border-cyan-400/40 text-rpg-text hover:text-cyan-300 active:scale-95 transition-all"
+                    >
+                      <span aria-hidden="true">🎒</span> Inventory
+                    </Link>
+                  </div>
                 </div>
 
-                {/* Quick Actions Header */}
-                <div className="flex items-center gap-2.5 flex-wrap shrink-0">
-                  <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold font-display uppercase tracking-wider bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 shadow-rpg-gold active:scale-95 transition-all"
-                  >
-                    <span aria-hidden="true">➕</span> New Quest
-                  </button>
-                  <Link
-                    to="/shop"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold bg-rpg-surface-2 border border-amber-500/30 hover:border-amber-500 text-amber-300 hover:brightness-110 active:scale-95 transition-all"
-                  >
-                    <span aria-hidden="true">🪙</span> Guild Shop
-                  </Link>
-                  <Link
-                    to="/inventory"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold bg-rpg-surface-2 border border-rpg-border hover:border-amber-500/40 text-rpg-text hover:text-amber-300 active:scale-95 transition-all"
-                  >
-                    <span aria-hidden="true">🎒</span> Inventory
-                  </Link>
+                {/* ── Futuristic 3D Floating RPG Command Core ─────────────────── */}
+                <div className="flex justify-center lg:justify-end shrink-0 py-2">
+                  <FloatingRpgCore
+                    level={data.player.level}
+                    streak={data.streak?.currentStreak ?? 0}
+                    activeQuestsCount={data.quests.active}
+                  />
                 </div>
               </div>
             </header>

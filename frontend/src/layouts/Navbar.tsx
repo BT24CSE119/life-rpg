@@ -5,8 +5,7 @@ import RPGButton from '../components/RPGButton';
 import GoldBadge from '../components/GoldBadge';
 import NotificationCenter from '../components/NotificationCenter';
 import { useAuth } from '../hooks/useAuth';
-import { getWallet } from '../services/rpg';
-import { getUnreadNotificationCount } from '../services/notification';
+import { useRpg } from '../context/RpgContext';
 
 const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
@@ -20,25 +19,8 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout, isLoading } = useAuth();
-  const [goldBalance, setGoldBalance] = useState<number | null>(null);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const { goldBalance, unreadCount, realtimeConnected, equippedCosmetics } = useRpg();
   const isLanding = location.pathname === '/';
-
-  // Fetch wallet balance and unread notification count when authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      getWallet()
-        .then((data) => setGoldBalance(data.goldBalance))
-        .catch(() => setGoldBalance(null));
-
-      getUnreadNotificationCount()
-        .then((data) => setUnreadCount(data.unreadCount))
-        .catch(() => setUnreadCount(0));
-    } else {
-      setGoldBalance(null);
-      setUnreadCount(0);
-    }
-  }, [isAuthenticated, location.pathname]);
 
   // Detect scroll to add backdrop blur
   useEffect(() => {
@@ -182,8 +164,20 @@ const Navbar: React.FC = () => {
                     <GoldBadge amount={goldBalance} size="sm" />
                   </Link>
                 )}
+                {realtimeConnected && (
+                  <span
+                    className="hidden xl:inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-full"
+                    title="Real-time Server Sync Active"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
+                    LIVE
+                  </span>
+                )}
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rpg-surface-2 border border-rpg-border text-rpg-text flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                  {equippedCosmetics.find((c) => c.category === 'AVATAR_FRAME')?.iconEmoji && (
+                    <span aria-hidden="true">{equippedCosmetics.find((c) => c.category === 'AVATAR_FRAME')?.iconEmoji}</span>
+                  )}
                   {user?.username}
                 </span>
                 <RPGButton

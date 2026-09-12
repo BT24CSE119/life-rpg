@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { getOrCreateProfile } from './rpg.service';
 import { createNotification } from './notification.service';
+import { realtimeService } from './realtime.service';
 
 export const INITIAL_SHOP_ITEMS = [
   {
@@ -124,7 +125,7 @@ export const getShopItems = async (userId: string) => {
 export const purchaseItem = async (userId: string, itemId: string) => {
   await ensureShopItemsSeeded();
 
-  return prisma.$transaction(
+  const result = await prisma.$transaction(
     async (tx) => {
       const item = await tx.item.findFirst({
         where: { id: itemId, isActive: true },
@@ -229,4 +230,16 @@ export const purchaseItem = async (userId: string, itemId: string) => {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );
+
+  realtimeService.emitUserEvent(userId, 'ITEM_PURCHASED', {
+    itemId,
+    item: result.item,
+    newGoldBalance: result.newGoldBalance,
+  });
+  realtimeService.emitUserEvent(userId, 'GOLD_GAINED', {
+    amount: -result.item.goldCost,
+    goldBalance: result.newGoldBalance,
+  });
+
+  return result;
 };

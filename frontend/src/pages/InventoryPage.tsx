@@ -36,11 +36,32 @@ const InventoryPage: React.FC = () => {
 
   const handleEquip = async (itemId: string, name: string) => {
     setActionId(itemId);
+    const prevItems = [...items];
+
+    // Optimistic UI update: equip target, unequip slot conflict
+    const targetItem = items.find((i) => i.itemId === itemId);
+    const targetCategory = targetItem?.item.category || targetItem?.item.type;
+
+    setItems((prev) =>
+      prev.map((i) => {
+        const itemCat = i.item.category || i.item.type;
+        if (i.itemId === itemId) {
+          return { ...i, isEquipped: true };
+        }
+        if (itemCat === targetCategory) {
+          return { ...i, isEquipped: false };
+        }
+        return i;
+      })
+    );
+
     try {
       await equipItem(itemId);
       setToast(`⚔️ Equipped ${name}`);
       await loadInventory();
     } catch (err: unknown) {
+      // Safe rollback
+      setItems(prevItems);
       setToast((err as Error).message || 'Failed to equip item');
     } finally {
       setActionId(null);
@@ -50,11 +71,20 @@ const InventoryPage: React.FC = () => {
 
   const handleUnequip = async (itemId: string, name: string) => {
     setActionId(itemId);
+    const prevItems = [...items];
+
+    // Optimistic UI update
+    setItems((prev) =>
+      prev.map((i) => (i.itemId === itemId ? { ...i, isEquipped: false } : i))
+    );
+
     try {
       await unequipItem(itemId);
       setToast(`Unequipped ${name}`);
       await loadInventory();
     } catch (err: unknown) {
+      // Safe rollback
+      setItems(prevItems);
       setToast((err as Error).message || 'Failed to unequip item');
     } finally {
       setActionId(null);

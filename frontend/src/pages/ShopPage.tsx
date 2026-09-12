@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PageContainer from '../layouts/PageContainer';
 import { getShopItems, purchaseShopItem } from '../services/shop';
+import { useRpg } from '../context/RpgContext';
 import type { ShopItem } from '../types';
 
 const RARITY_STYLES: Record<string, { badge: string; border: string }> = {
@@ -12,9 +13,11 @@ const RARITY_STYLES: Record<string, { badge: string; border: string }> = {
 };
 
 const ShopPage: React.FC = () => {
+  const { setGoldBalance: setGlobalGold } = useRpg();
   const [items, setItems] = useState<ShopItem[]>([]);
   const [goldBalance, setGoldBalance] = useState<number>(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [confirmItem, setConfirmItem] = useState<ShopItem | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -26,6 +29,7 @@ const ShopPage: React.FC = () => {
       const data = await getShopItems();
       setItems(data.items);
       setGoldBalance(data.userGoldBalance);
+      setGlobalGold(data.userGoldBalance);
     } catch {
       // Silently handle
     } finally {
@@ -38,11 +42,12 @@ const ShopPage: React.FC = () => {
   }, []);
 
   const handlePurchase = async () => {
-    if (!confirmItem) return;
+    if (!confirmItem || purchasingId) return;
     setPurchasingId(confirmItem.id);
     try {
       const result = await purchaseShopItem(confirmItem.id);
       setGoldBalance(result.newGoldBalance);
+      setGlobalGold(result.newGoldBalance);
       setToast(`🎉 Successfully acquired ${confirmItem.name}!`);
       setConfirmItem(null);
       await loadCatalog();
@@ -55,9 +60,9 @@ const ShopPage: React.FC = () => {
   };
 
   const categories = ['ALL', 'AVATAR_FRAME', 'TITLE', 'EFFECT', 'BADGE', 'BOOSTER'];
-  const filteredItems = selectedCategory === 'ALL'
-    ? items
-    : items.filter((i) => (i.category || i.type) === selectedCategory);
+  const filteredItems = items
+    .filter((i) => selectedCategory === 'ALL' || (i.category || i.type) === selectedCategory)
+    .filter((i) => !searchQuery.trim() || i.name.toLowerCase().includes(searchQuery.toLowerCase()) || i.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
@@ -93,23 +98,43 @@ const ShopPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Category Filters */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2" role="tablist">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              role="tab"
-              aria-selected={selectedCategory === cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                selectedCategory === cat
-                  ? 'bg-amber-950/60 text-amber-300 border border-amber-500/40 shadow-sm'
-                  : 'bg-rpg-surface-2/60 text-rpg-text-muted border border-transparent hover:border-rpg-border'
-              }`}
-            >
-              {cat === 'ALL' ? 'All Wares' : cat.replace('_', ' ')}
-            </button>
-          ))}
+        {/* Search & Category Filter Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1" role="tablist">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                role="tab"
+                aria-selected={selectedCategory === cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  selectedCategory === cat
+                    ? 'bg-amber-950/60 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'bg-rpg-surface-2/60 text-rpg-text-muted border border-transparent hover:border-rpg-border'
+                }`}
+              >
+                {cat === 'ALL' ? 'All Wares' : cat.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative shrink-0 w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="🔍 Search treasures..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs rounded-lg bg-rpg-surface-2 border border-rpg-border text-rpg-text focus:outline-none focus:border-amber-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-rpg-text-muted hover:text-rpg-text"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Shop Grid */}

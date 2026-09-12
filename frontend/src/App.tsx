@@ -14,20 +14,22 @@ import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
 import AchievementsPage from './pages/AchievementsPage';
 import HealthStatus from './components/HealthStatus';
+import { RpgProvider } from './context/RpgContext';
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* Accessible skip-to-content link */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-rpg-gold focus:text-rpg-bg focus:rounded-rpg focus:font-semibold"
-        >
-          Skip to main content
-        </a>
+        <RpgProvider>
+          {/* Accessible skip-to-content link */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-rpg-gold focus:text-rpg-bg focus:rounded-rpg focus:font-semibold"
+          >
+            Skip to main content
+          </a>
 
-        <Navbar />
+          <Navbar />
 
         <main id="main-content">
           <Routes>
@@ -86,6 +88,7 @@ const App: React.FC = () => {
 
         {/* Dev-only health status indicator */}
         {import.meta.env.DEV && <HealthStatus />}
+        </RpgProvider>
       </AuthProvider>
     </BrowserRouter>
   );
