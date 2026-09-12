@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import apiRouter from './routes';
 import { errorHandler } from './middleware/errorHandler';
@@ -19,6 +20,7 @@ const createApp = (): Application => {
   );
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
 
   // ── Request Logging (development) ──────────────────────────────────────────
   if (env.NODE_ENV === 'development') {

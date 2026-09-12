@@ -23,9 +23,13 @@ const envSchema = z.object({
     .default('3001')
     .transform(Number)
     .refine((n) => n > 0 && n < 65536, 'PORT must be a valid port number'),
-  // DATABASE_URL is optional at boot — server degrades gracefully without DB
   DATABASE_URL: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
+  // JWT
+  JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 chars'),
+  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 chars'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 });
 
 const parsed = envSchema.safeParse(process.env);

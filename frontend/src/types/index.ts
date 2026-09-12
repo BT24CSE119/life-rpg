@@ -1,5 +1,5 @@
 // ============================================================
-// Life RPG — Shared TypeScript Types (Phase 1)
+// Life RPG — Shared TypeScript Types (Phase 1 + Phase 2)
 // ============================================================
 
 // --- API Response Wrappers ---
@@ -167,4 +167,52 @@ export interface PreviewQuest {
   goldReward: number;
   category: string;
   status: QuestStatus;
+}
+
+// ============================================================
+// --- Phase 2: Authentication Types ---
+// ============================================================
+
+export type UserRole = 'USER' | 'ADMIN';
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SignupDto {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  success: true;
+  message: string;
+  data: {
+    user: User;
+    accessToken?: string;
+  };
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+export interface ApiValidationError {
+  success: false;
+  error: {
+    message: string;
+    details?: ValidationError[];
+  };
 }
