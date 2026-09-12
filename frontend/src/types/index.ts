@@ -49,6 +49,7 @@ export type QuestDifficulty =
   | 'EPIC'
   | 'LEGENDARY';
 
+// Statuses used by static landing/dashboard preview data.
 export type QuestStatus = 'ACTIVE' | 'COMPLETED' | 'FAILED' | 'ABANDONED';
 
 export type ItemType =
@@ -91,25 +92,6 @@ export interface Character {
   currentStreak: number;
   longestStreak: number;
   lastActiveAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// --- Quest ---
-
-export interface Quest {
-  id: string;
-  userId: string;
-  title: string;
-  description?: string;
-  category?: string;
-  tags: string[];
-  difficulty: QuestDifficulty;
-  xpReward: number;
-  goldReward: number;
-  status: QuestStatus;
-  dueDate?: string;
-  completedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -215,4 +197,109 @@ export interface ApiValidationError {
     message: string;
     details?: ValidationError[];
   };
+}
+
+// ============================================================
+// --- Phase 3: Quest Types ---
+// ============================================================
+
+export type QuestPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type QuestStatusType =
+  | 'TODO'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  // Retained for quests created before Phase 3's streamlined workflow.
+  | 'ACTIVE'
+  | 'FAILED'
+  | 'ABANDONED';
+
+export interface Quest {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: QuestPriority;
+  status: QuestStatusType;
+  dueDate: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+}
+
+export interface CreateQuestInput {
+  title: string;
+  description?: string;
+  priority?: QuestPriority;
+  dueDate?: string | null;
+}
+
+export interface UpdateQuestInput {
+  title?: string;
+  description?: string | null;
+  priority?: QuestPriority;
+  status?: QuestStatusType;
+  dueDate?: string | null;
+}
+
+// ============================================================
+// --- Phase 4: RPG Progression Types ---
+// ============================================================
+
+export interface RpgAttributes {
+  strength: number;
+  intelligence: number;
+  discipline: number;
+  stamina: number;
+  consistency: number;
+}
+
+export interface ProgressionResult {
+  previousLevel: number;
+  newLevel: number;
+  totalXp: number;
+  currentLevelXp: number;
+  nextLevelXp: number;
+  progressPercent: number;
+  levelUp: boolean;
+}
+
+export interface RpgProfile {
+  userId: string;
+  level: number;
+  totalXp: number;
+  currentLevelXp: number;
+  nextLevelXp: number;
+  progressPercent: number;
+  attributes: RpgAttributes;
+}
+
+export interface RewardResult {
+  xpAwarded: number;
+  reason: 'QUEST_COMPLETION';
+}
+
+export interface QuestCompletionResult {
+  quest: Quest;
+  reward: RewardResult;
+  progression: ProgressionResult;
+  duplicateCompletion: boolean;
+}
+
+export interface XpHistoryEntry {
+  id: string;
+  amount: number;
+  reason: 'QUEST_COMPLETION';
+  questId: string;
+  questTitle: string;
+  createdAt: string;
+}
+
+export interface XpHistoryResult {
+  entries: XpHistoryEntry[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export interface RpgStats extends RpgProfile {
+  completedQuests: number;
+  totalQuests: number;
 }

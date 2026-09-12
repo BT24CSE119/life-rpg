@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageContainer from './PageContainer';
 import RPGButton from '../components/RPGButton';
+import { useAuth } from '../hooks/useAuth';
 
 const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
@@ -13,6 +14,9 @@ const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
+  const isLanding = location.pathname === '/';
 
   // Detect scroll to add backdrop blur
   useEffect(() => {
@@ -55,7 +59,7 @@ const Navbar: React.FC = () => {
 
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-6" role="list">
-            {NAV_LINKS.map((link) => (
+            {isLanding && NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
@@ -65,18 +69,72 @@ const Navbar: React.FC = () => {
                 {link.label}
               </a>
             ))}
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/quests"
+                  className={`text-sm font-medium transition-colors duration-200 ${
+                    location.pathname === '/quests'
+                      ? 'text-rpg-gold'
+                      : 'text-rpg-text-muted hover:text-rpg-gold'
+                  }`}
+                  role="listitem"
+                >
+                  📜 Quests
+                </Link>
+                <Link
+                  to="/rpg"
+                  className={`text-sm font-medium transition-colors duration-200 ${
+                    location.pathname === '/rpg' ? 'text-rpg-gold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                  }`}
+                  role="listitem"
+                >
+                  ✦ Progress
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className={`text-sm font-medium transition-colors duration-200 ${
+                    location.pathname === '/dashboard'
+                      ? 'text-rpg-gold'
+                      : 'text-rpg-text-muted hover:text-rpg-gold'
+                  }`}
+                  role="listitem"
+                >
+                  🏰 Dashboard
+                </Link>
+              </>
+            )}
           </div>
 
           {/* CTA buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/dashboard">
-              <RPGButton variant="ghost" size="sm">
-                Dashboard Preview
-              </RPGButton>
-            </Link>
-            <RPGButton variant="gold" size="sm">
-              Begin Your Quest
-            </RPGButton>
+            {!isLoading && isAuthenticated ? (
+              <>
+                <span className="text-sm text-rpg-text-muted font-medium">
+                  ⚔️ {user?.username}
+                </span>
+                <RPGButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => { await logout(); navigate('/'); }}
+                >
+                  Logout
+                </RPGButton>
+              </>
+            ) : !isLoading ? (
+              <>
+                <Link to="/login">
+                  <RPGButton variant="ghost" size="sm">
+                    Login
+                  </RPGButton>
+                </Link>
+                <Link to="/signup">
+                  <RPGButton variant="gold" size="sm">
+                    Begin Your Quest
+                  </RPGButton>
+                </Link>
+              </>
+            ) : null}
           </div>
 
           {/* Mobile hamburger */}
@@ -114,7 +172,7 @@ const Navbar: React.FC = () => {
             aria-label="Mobile navigation"
           >
             <div className="flex flex-col gap-1">
-              {NAV_LINKS.map((link) => (
+              {isLanding && NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -124,15 +182,41 @@ const Navbar: React.FC = () => {
                   {link.label}
                 </a>
               ))}
+              {isAuthenticated && (
+                <>
+                  <Link to="/quests" onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2.5 text-sm text-rpg-text-muted hover:text-rpg-gold hover:bg-rpg-surface-3 rounded-rpg transition-colors"
+                  >
+                    📜 Quests
+                  </Link>
+                  <Link to="/dashboard" onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2.5 text-sm text-rpg-text-muted hover:text-rpg-gold hover:bg-rpg-surface-3 rounded-rpg transition-colors"
+                  >
+                    🏰 Dashboard
+                  </Link>
+                </>
+              )}
               <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-rpg-border/50">
-                <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
-                  <RPGButton variant="ghost" size="sm" fullWidth>
-                    Dashboard Preview
+                {isAuthenticated ? (
+                  <RPGButton variant="ghost" size="sm" fullWidth
+                    onClick={async () => { setMobileOpen(false); await logout(); navigate('/'); }}
+                  >
+                    Logout
                   </RPGButton>
-                </Link>
-                <RPGButton variant="gold" size="sm" fullWidth>
-                  Begin Your Quest
-                </RPGButton>
+                ) : (
+                  <>
+                    <Link to="/login" onClick={() => setMobileOpen(false)}>
+                      <RPGButton variant="ghost" size="sm" fullWidth>
+                        Login
+                      </RPGButton>
+                    </Link>
+                    <Link to="/signup" onClick={() => setMobileOpen(false)}>
+                      <RPGButton variant="gold" size="sm" fullWidth>
+                        Begin Your Quest
+                      </RPGButton>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

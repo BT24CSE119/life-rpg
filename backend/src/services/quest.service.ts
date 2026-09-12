@@ -1,0 +1,295 @@
+import { z } from 'zod';
+import prisma from '../config/database';
+import { Prisma, QuestStatus, QuestPriority, XpReason } from '@prisma/client';
+import { calculateQuestXp, getLevelProgress } from '../utils/rpg';
+import { DEFAULT_PROFILE, PROFILE_SELECT } from './rpg.service';
+
+// ── Validation Schemas ────────────────────────────────────────────────────────
+
+export const createQuestSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Title is required')
+    .max(100, 'Title must be at most 100 characters'),
+  description: z
+    .string()
+    .trim()
+    .max(1000, 'Description must be at most 1000 characters')
+    .optional(),
+  priority: z
+    .nativeEnum(QuestPriority)
+    .default(QuestPriority.MEDIUM),
+  dueDate: z
+    .string()
+    .datetime({ message: 'Invalid date format. Use ISO 8601.' })
+    .optional()
+    .nullable(),
+  // Silently ignore any client-provided reward/XP/ownership fields
+}).strip();
+
+export const updateQuestSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(1, 'Title cannot be empty')
+      .max(100, 'Title must be at most 100 characters')
+      .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(1000, 'Description must be at most 1000 characters')
+      .optional()
+      .nullable(),
+    priority: z.nativeEnum(QuestPriority).optional(),
+    // Completion must always flow through POST /:id/complete so the reward
+    // ledger and player profile are updated together in one transaction.
+    status: z
+      .enum([
+        QuestStatus.TODO,
+        QuestStatus.IN_PROGRESS,
+        QuestStatus.ACTIVE,
+        QuestStatus.FAILED,
+        QuestStatus.ABANDONED,
+      ])
+      .optional(),
+    dueDate: z
+      .string()
+      .datetime({ message: 'Invalid date format. Use ISO 8601.' })
+      .optional()
+      .nullable(),
+  })
+  .strip()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'Update body cannot be empty',
+  });
+
+// ── Safe Quest Select ─────────────────────────────────────────────────────────
+
+const QUEST_SELECT = {
+  id: true,
+  title: true,
+  description: true,
+  priority: true,
+  status: true,
+  dueDate: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  userId: true,
+} as const;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const notFoundError = (msg = 'Quest not found') => {
+  const err = new Error(msg) as Error & { statusCode: number };
+  err.statusCode = 404;
+  return err;
+};
+
+const forbiddenError = () => {
+  const err = new Error('Quest not found') as Error & { statusCode: number };
+  // Return 404 (not 403) — never reveal existence of another user's quest
+  err.statusCode = 404;
+  return err;
+};
+
+// ── Service Functions ─────────────────────────────────────────────────────────
+
+/**
+ * Get all quests for the authenticated user.
+ * - Supports optional status / priority filters
+ * - Sort: active first, then by dueDate asc, then by createdAt desc
+ */
+export const getQuests = async (
+  userId: string,
+  filters: { status?: QuestStatus; priority?: QuestPriority }
+) => {
+  const where = {
+    userId,
+    ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.priority ? { priority: filters.priority } : {}),
+  };
+
+  return prisma.quest.findMany({
+    where,
+    select: QUEST_SELECT,
+    orderBy: [
+      // Completed quests last
+      { status: 'asc' },
+      // Then sort by dueDate ascending (nulls last)
+      { dueDate: 'asc' },
+      // Then newest first
+      { createdAt: 'desc' },
+    ],
+  });
+};
+
+/**
+ * Get a single quest by ID — enforces ownership.
+ */
+export const getQuestById = async (questId: string, userId: string) => {
+  const quest = await prisma.quest.findFirst({
+    where: { id: questId, userId },
+    select: QUEST_SELECT,
+  });
+
+  if (!quest) throw notFoundError();
+
+  return quest;
+};
+
+/**
+ * Create a new quest owned by the authenticated user.
+ * Never trusts userId / XP / gold from the client.
+ */
+export const createQuest = async (
+  userId: string,
+  data: z.output<typeof createQuestSchema>
+) => {
+  return prisma.quest.create({
+    data: {
+      userId,                                   // Always from JWT — never client
+      title: data.title,
+      description: data.description ?? null,
+      priority: data.priority,
+      status: QuestStatus.TODO,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      // xpReward / goldReward stay at schema defaults — never from client
+    },
+    select: QUEST_SELECT,
+  });
+};
+
+/**
+ * Update an existing quest — enforces ownership.
+ * Completion is deliberately excluded here. Use completeQuestWithXp so a
+ * completed quest cannot exist without its server-authoritative XP record.
+ */
+export const updateQuest = async (
+  questId: string,
+  userId: string,
+  data: z.output<typeof updateQuestSchema>
+) => {
+  // Verify existence and ownership
+  const existing = await prisma.quest.findFirst({
+    where: { id: questId, userId },
+    select: { status: true },
+  });
+
+  if (!existing) throw notFoundError();
+
+  if (existing.status === QuestStatus.COMPLETED && data.status !== undefined) {
+    const err = new Error('Completed quests cannot be moved to another status') as Error & { statusCode: number };
+    err.statusCode = 409;
+    throw err;
+  }
+
+  return prisma.quest.update({
+    where: { id: questId },
+    data: {
+      ...(data.title !== undefined ? { title: data.title } : {}),
+      ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.priority !== undefined ? { priority: data.priority } : {}),
+      ...(data.status !== undefined ? { status: data.status } : {}),
+      ...(data.dueDate !== undefined
+        ? { dueDate: data.dueDate ? new Date(data.dueDate) : null }
+        : {}),
+    },
+    select: QUEST_SELECT,
+  });
+};
+
+/**
+ * Delete a quest — enforces ownership.
+ */
+export const deleteQuest = async (questId: string, userId: string) => {
+  const existing = await prisma.quest.findFirst({
+    where: { id: questId, userId },
+    select: { id: true },
+  });
+
+  if (!existing) throw notFoundError();
+
+  await prisma.quest.delete({ where: { id: questId } });
+};
+
+/**
+ * Mark a quest as COMPLETED.
+ * - Idempotent: completing an already-completed quest is a no-op
+ * - No XP / gold / level calculation in Phase 3
+ */
+export const completeQuest = async (questId: string, userId: string) => {
+  const existing = await prisma.quest.findFirst({
+    where: { id: questId, userId },
+    select: { status: true },
+  });
+
+  if (!existing) throw notFoundError();
+
+  // Already completed — return idempotently without creating duplicate records
+  if (existing.status === QuestStatus.COMPLETED) {
+    return prisma.quest.findUnique({
+      where: { id: questId },
+      select: QUEST_SELECT,
+    });
+  }
+
+  return prisma.quest.update({
+    where: { id: questId },
+    data: {
+      status: QuestStatus.COMPLETED,
+      completedAt: new Date(),
+    },
+    select: QUEST_SELECT,
+  });
+};
+
+export const completeQuestWithXp = async (questId: string, userId: string) => {
+  const runCompletion = () => prisma.$transaction(async (tx) => {
+    const existing = await tx.quest.findFirst({
+      where: { id: questId, userId },
+      select: { priority: true },
+    });
+    if (!existing) throw notFoundError();
+
+    const profile = await tx.playerProfile.upsert({
+      where: { userId }, create: { userId, ...DEFAULT_PROFILE }, update: {}, select: PROFILE_SELECT,
+    });
+    const completed = await tx.quest.updateMany({
+      where: { id: questId, userId, status: { not: QuestStatus.COMPLETED } },
+      data: { status: QuestStatus.COMPLETED, completedAt: new Date() },
+    });
+
+    if (completed.count === 0) {
+      const quest = await tx.quest.findFirst({ where: { id: questId, userId }, select: QUEST_SELECT });
+      if (!quest) throw notFoundError();
+      const progress = getLevelProgress(profile.totalXp);
+      return { quest, reward: { xpAwarded: 0, reason: XpReason.QUEST_COMPLETION }, progression: { previousLevel: profile.level, newLevel: profile.level, ...progress, levelUp: false }, duplicateCompletion: true };
+    }
+
+    const xpAwarded = calculateQuestXp(existing.priority);
+    await tx.xpTransaction.create({ data: { userId, questId, amount: xpAwarded, reason: XpReason.QUEST_COMPLETION } });
+    const totalXp = profile.totalXp + xpAwarded;
+    const calculated = getLevelProgress(totalXp);
+    const updatedProfile = await tx.playerProfile.update({
+      where: { userId }, data: { totalXp, level: calculated.level }, select: PROFILE_SELECT,
+    });
+    const quest = await tx.quest.findUniqueOrThrow({ where: { id: questId }, select: QUEST_SELECT });
+    return {
+      quest,
+      reward: { xpAwarded, reason: XpReason.QUEST_COMPLETION },
+      progression: { previousLevel: profile.level, newLevel: updatedProfile.level, ...calculated, levelUp: updatedProfile.level > profile.level },
+      duplicateCompletion: false,
+    };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try { return await runCompletion(); }
+    catch (error) {
+      if ((error as { code?: string }).code !== 'P2034' || attempt === 2) throw error;
+    }
+  }
+  throw new Error('Quest completion could not be finalized');
+};

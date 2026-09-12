@@ -11,6 +11,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
+    "test:rpg": "tsx --test tests/rpg.integration.test.ts",
     "db:generate": "prisma generate --schema=../prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema=../prisma/schema.prisma",
     "db:migrate:prod": "prisma migrate deploy --schema=../prisma/schema.prisma",

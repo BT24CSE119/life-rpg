@@ -8,6 +8,8 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
+import QuestBoardPage from './pages/QuestBoardPage';
+import RpgPage from './pages/RpgPage';
 import HealthStatus from './components/HealthStatus';
 
 const App: React.FC = () => {
@@ -40,6 +42,15 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/quests"
+              element={
+                <ProtectedRoute>
+                  <QuestBoardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/rpg" element={<ProtectedRoute><RpgPage /></ProtectedRoute>} />
 
             {/* 404 catch-all */}
             <Route

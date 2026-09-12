@@ -10,18 +10,20 @@ datasource db {
 
 /// A registered user account
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
-  username       String         @unique
+  id             String            @id @default(cuid())
+  email          String            @unique
+  username       String            @unique
   passwordHash   String
-  role           UserRole       @default(USER)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  role           UserRole          @default(USER)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
   activityLogs   ActivityLog[]
   character      Character?
   inventory      Inventory[]
   completions    QuestCompletion[]
   quests         Quest[]
+  playerProfile  PlayerProfile?
+  xpTransactions XpTransaction[]
   refreshTokens  RefreshToken[]
 
   @@index([email])
@@ -70,9 +72,10 @@ model Quest {
   category       String?
   tags           String[]
   difficulty     QuestDifficulty   @default(MEDIUM)
+  priority       QuestPriority     @default(MEDIUM)
   xpReward       Int               @default(50)
   goldReward     Int               @default(25)
-  status         QuestStatus       @default(ACTIVE)
+  status         QuestStatus       @default(TODO)
   dueDate        DateTime?
   completedAt    DateTime?
   failedAt       DateTime?
@@ -81,12 +84,50 @@ model Quest {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   completions    QuestCompletion[]
+  xpTransactions XpTransaction[]
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, status])
+  @@index([userId, priority])
   @@index([userId, dueDate])
   @@map("quests")
+}
+
+/// Authoritative Phase 4 progression state for a user.
+model PlayerProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  totalXp      Int      @default(0)
+  level        Int      @default(1)
+  strength     Int      @default(1)
+  intelligence Int      @default(1)
+  discipline   Int      @default(1)
+  stamina      Int      @default(1)
+  consistency  Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("player_profiles")
+}
+
+/// Immutable ledger entry for XP granted by a trusted server-side action.
+model XpTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  questId   String   @unique
+  amount    Int
+  reason    XpReason
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest     Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("xp_transactions")
 }
 
 /// A log entry when a quest is completed
@@ -170,7 +211,7 @@ model ActivityLog {
 /// Stored refresh token (hashed) for session management
 model RefreshToken {
   id        String   @id @default(cuid())
-  tokenHash String   @unique          // SHA-256 hash of the raw token
+  tokenHash String   @unique // SHA-256 hash of the raw token
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
@@ -187,6 +228,12 @@ enum UserRole {
   ADMIN
 }
 
+enum QuestPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum QuestDifficulty {
   TRIVIAL
   EASY
@@ -197,10 +244,16 @@ enum QuestDifficulty {
 }
 
 enum QuestStatus {
+  TODO
+  IN_PROGRESS
   ACTIVE
   COMPLETED
   FAILED
   ABANDONED
+}
+
+enum XpReason {
+  QUEST_COMPLETION
 }
 
 enum ItemType {
