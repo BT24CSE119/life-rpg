@@ -1,0 +1,264 @@
+// =============================================================================
+// Life RPG — Prisma Schema
+// Phase 1: Foundation (all models defined, no data yet)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum QuestDifficulty {
+  TRIVIAL
+  EASY
+  MEDIUM
+  HARD
+  EPIC
+  LEGENDARY
+}
+
+enum QuestStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  ABANDONED
+}
+
+enum ItemType {
+  WEAPON
+  ARMOR
+  ACCESSORY
+  CONSUMABLE
+  COSMETIC
+  BOOST
+}
+
+enum ItemRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum LogAction {
+  QUEST_CREATED
+  QUEST_COMPLETED
+  QUEST_FAILED
+  QUEST_ABANDONED
+  LEVEL_UP
+  ITEM_PURCHASED
+  STREAK_MILESTONE
+  CHARACTER_CREATED
+  ATTRIBUTE_INCREASED
+}
+
+// =============================================================================
+// MODELS
+// =============================================================================
+
+/// A registered user account
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  character    Character?
+  quests       Quest[]
+  completions  QuestCompletion[]
+  inventory    Inventory[]
+  activityLogs ActivityLog[]
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+/// The RPG character associated with a user (1:1)
+model Character {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Identity
+  name      String
+  avatarUrl String?
+  bio       String?
+
+  // Core RPG stats
+  level Int @default(1)
+  xp    Int @default(0)
+  gold  Int @default(100)
+
+  // Health
+  hp    Int @default(100)
+  maxHp Int @default(100)
+
+  // Attributes (primary stats that affect gameplay)
+  strength     Int @default(5) // Physical quests
+  agility      Int @default(5) // Speed/efficiency
+  intelligence Int @default(5) // Learning/knowledge quests
+  wisdom       Int @default(5) // Reflection/journaling
+  vitality     Int @default(5) // Health & wellness quests
+  charisma     Int @default(5) // Social quests
+
+  // Progression
+  totalXpEarned   Int @default(0)
+  totalGoldEarned Int @default(0)
+  questsCompleted Int @default(0)
+
+  // Streaks
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  lastActiveAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("characters")
+}
+
+/// A quest/task that a user creates and completes
+model Quest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content
+  title       String
+  description String?
+  category    String? // e.g. "Fitness", "Learning", "Work"
+  tags        String[] // Flexible tagging
+
+  // RPG properties
+  difficulty QuestDifficulty @default(MEDIUM)
+  xpReward   Int             @default(50)
+  goldReward Int             @default(25)
+
+  // State
+  status      QuestStatus @default(ACTIVE)
+  dueDate     DateTime?
+  completedAt DateTime?
+  failedAt    DateTime?
+
+  // Recurrence (Phase 2+)
+  isRecurring     Boolean @default(false)
+  recurrenceRule  String? // iCal RRULE format
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  completions QuestCompletion[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, dueDate])
+  @@map("quests")
+}
+
+/// A log entry when a quest is completed
+model QuestCompletion {
+  id      String @id @default(cuid())
+  questId String
+  userId  String
+
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completedAt DateTime @default(now())
+  xpEarned    Int
+  goldEarned  Int
+  notes       String? // Optional completion note
+
+  @@index([userId])
+  @@index([questId])
+  @@index([userId, completedAt])
+  @@map("quest_completions")
+}
+
+/// A shop item that can be purchased with Gold
+model Item {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+
+  type      ItemType
+  rarity    ItemRarity @default(COMMON)
+
+  // Effects
+  xpBonus      Int     @default(0)
+  goldBonus    Int     @default(0)
+  hpBonus      Int     @default(0)
+  strBonus     Int     @default(0)
+  agiBonus     Int     @default(0)
+  intBonus     Int     @default(0)
+  wisBonus     Int     @default(0)
+  vitBonus     Int     @default(0)
+  chaBonus     Int     @default(0)
+
+  // Commerce
+  goldCost  Int
+  isActive  Boolean @default(true)
+
+  // Display
+  imageUrl  String?
+  iconEmoji String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  inventory Inventory[]
+
+  @@index([type])
+  @@index([rarity])
+  @@map("items")
+}
+
+/// An item in a user's inventory
+model Inventory {
+  id     String @id @default(cuid())
+  userId String
+  itemId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  quantity   Int      @default(1)
+  isEquipped Boolean  @default(false)
+  acquiredAt DateTime @default(now())
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@map("inventory")
+}
+
+/// An audit log of all significant actions taken by a user
+model ActivityLog {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  action    LogAction
+  metadata  Json?     // Flexible payload for action details
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([userId, action])
+  @@index([userId, createdAt])
+  @@map("activity_logs")
+}
