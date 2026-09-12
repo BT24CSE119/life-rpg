@@ -11,6 +11,15 @@
 [![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Prisma](https://img.shields.io/badge/Prisma_ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Vercel](https://img.shields.io/badge/Vercel_Frontend-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-iota-amber-91.vercel.app)
+[![Render](https://img.shields.io/badge/Render_Backend-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://life-rpg-backend-b61m.onrender.com)
+
+---
+
+### 🌐 Live Production Links
+- **Frontend (Vercel)**: [https://frontend-iota-amber-91.vercel.app](https://frontend-iota-amber-91.vercel.app)
+- **Backend API (Render)**: [https://life-rpg-backend-b61m.onrender.com](https://life-rpg-backend-b61m.onrender.com)
+- **API Health Check**: [https://life-rpg-backend-b61m.onrender.com/api/health](https://life-rpg-backend-b61m.onrender.com/api/health)
 
 ---
 
