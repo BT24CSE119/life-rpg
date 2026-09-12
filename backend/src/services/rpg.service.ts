@@ -6,6 +6,7 @@ const PROFILE_SELECT = {
   userId: true,
   totalXp: true,
   level: true,
+  goldBalance: true,
   strength: true,
   intelligence: true,
   discipline: true,
@@ -16,6 +17,7 @@ const PROFILE_SELECT = {
 const DEFAULT_PROFILE = {
   totalXp: 0,
   level: 1,
+  goldBalance: 0,
   strength: 1,
   intelligence: 1,
   discipline: 1,
@@ -36,6 +38,7 @@ export const toProfileResponse = (profile: Awaited<ReturnType<typeof getOrCreate
   return {
     userId: profile.userId,
     ...progress,
+    goldBalance: profile.goldBalance,
     attributes: {
       strength: profile.strength,
       intelligence: profile.intelligence,
@@ -71,6 +74,35 @@ export const getXpHistory = async (userId: string, page: number, limit: number) 
     entries: transactions.map(({ quest, ...transaction }) => ({
       ...transaction,
       questTitle: quest.title,
+    })),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+};
+
+export const getWallet = async (userId: string) => {
+  const profile = await getOrCreateProfile(userId);
+  return { goldBalance: profile.goldBalance };
+};
+
+export const getGoldHistory = async (userId: string, page: number, limit: number) => {
+  const [transactions, total] = await Promise.all([
+    prisma.goldTransaction.findMany({
+      where: { userId },
+      select: {
+        id: true, amount: true, balanceAfter: true, type: true, reason: true,
+        questId: true, createdAt: true, quest: { select: { title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.goldTransaction.count({ where: { userId } }),
+  ]);
+
+  return {
+    items: transactions.map(({ quest, ...transaction }) => ({
+      ...transaction,
+      questTitle: quest?.title ?? null,
     })),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };

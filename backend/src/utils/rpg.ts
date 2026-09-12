@@ -6,6 +6,12 @@ const QUEST_XP: Record<QuestPriority, number> = {
   HIGH: 50,
 };
 
+const QUEST_GOLD: Record<QuestPriority, number> = {
+  LOW: 5,
+  MEDIUM: 15,
+  HIGH: 30,
+};
+
 export interface LevelProgress {
   level: number;
   totalXp: number;
@@ -14,8 +20,21 @@ export interface LevelProgress {
   progressPercent: number;
 }
 
-/** Returns the server-authoritative reward for a quest priority. */
-export const calculateQuestXp = (priority: QuestPriority): number => QUEST_XP[priority];
+/** Returns the server-authoritative XP reward for a quest or quest priority. */
+export const calculateQuestXp = (input: QuestPriority | { priority: QuestPriority }): number => {
+  const priority = typeof input === 'string' ? input : input.priority;
+  return Math.max(0, QUEST_XP[priority] ?? 10);
+};
+
+export const calculateQuestXpReward = calculateQuestXp;
+
+/** Returns the server-authoritative Gold reward for a quest or quest priority. */
+export const calculateQuestGold = (input: QuestPriority | { priority: QuestPriority }): number => {
+  const priority = typeof input === 'string' ? input : input.priority;
+  return Math.max(0, QUEST_GOLD[priority] ?? 5);
+};
+
+export const calculateQuestGoldReward = calculateQuestGold;
 
 /** Cumulative XP required to start a level. Level 1 starts at zero XP. */
 export const getTotalXpRequiredForLevel = (level: number): number =>

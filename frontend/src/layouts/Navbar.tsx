@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageContainer from './PageContainer';
 import RPGButton from '../components/RPGButton';
+import GoldBadge from '../components/GoldBadge';
 import { useAuth } from '../hooks/useAuth';
+import { getWallet } from '../services/rpg';
 
 const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
@@ -16,7 +18,19 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout, isLoading } = useAuth();
+  const [goldBalance, setGoldBalance] = useState<number | null>(null);
   const isLanding = location.pathname === '/';
+
+  // Fetch wallet balance when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      getWallet()
+        .then((data) => setGoldBalance(data.goldBalance))
+        .catch(() => setGoldBalance(null));
+    } else {
+      setGoldBalance(null);
+    }
+  }, [isAuthenticated, location.pathname]);
 
   // Detect scroll to add backdrop blur
   useEffect(() => {
@@ -110,6 +124,11 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-3">
             {!isLoading && isAuthenticated ? (
               <>
+                {goldBalance !== null && (
+                  <Link to="/rpg" title="View Treasury">
+                    <GoldBadge amount={goldBalance} size="sm" />
+                  </Link>
+                )}
                 <span className="text-sm text-rpg-text-muted font-medium">
                   ⚔️ {user?.username}
                 </span>
@@ -188,6 +207,12 @@ const Navbar: React.FC = () => {
                     className="px-3 py-2.5 text-sm text-rpg-text-muted hover:text-rpg-gold hover:bg-rpg-surface-3 rounded-rpg transition-colors"
                   >
                     📜 Quests
+                  </Link>
+                  <Link to="/rpg" onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2.5 text-sm text-rpg-text-muted hover:text-rpg-gold hover:bg-rpg-surface-3 rounded-rpg transition-colors flex items-center justify-between"
+                  >
+                    <span>✦ Progress & Treasury</span>
+                    {goldBalance !== null && <GoldBadge amount={goldBalance} size="sm" />}
                   </Link>
                   <Link to="/dashboard" onClick={() => setMobileOpen(false)}
                     className="px-3 py-2.5 text-sm text-rpg-text-muted hover:text-rpg-gold hover:bg-rpg-surface-3 rounded-rpg transition-colors"

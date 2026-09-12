@@ -213,7 +213,7 @@ export const completeQuestHandler = async (
 
     res.status(200).json({
       success: true,
-      message: completion.duplicateCompletion ? 'Quest was already completed' : 'Quest completed and XP awarded successfully',
+      message: completion.duplicateCompletion ? 'Quest was already completed' : 'Quest completed and rewards awarded successfully',
       data: completion,
     });
   } catch (err) {

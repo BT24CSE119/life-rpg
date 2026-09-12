@@ -37,7 +37,7 @@ const PRIORITY_FILTERS: { value: QuestPriority | 'ALL'; label: string; icon: str
 interface Toast {
   id: number;
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
 }
 
 let toastId = 0;
@@ -70,7 +70,7 @@ const QuestBoardPage: React.FC = () => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  const addToast = useCallback((message: string, type: 'success' | 'error') => {
+  const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = ++toastId;
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
@@ -174,10 +174,16 @@ const QuestBoardPage: React.FC = () => {
         prev.map((q) => (q.id === completed.quest.id ? completed.quest : q))
       );
       if (!completed.duplicateCompletion) {
-        addToast(`+${completed.reward.xpAwarded} XP${completed.progression.levelUp ? ` — LEVEL UP! Level ${completed.progression.newLevel}` : ''}`, 'success');
+        addToast(
+          `+${completed.reward.xpAwarded} XP · +${completed.reward.goldAwarded} Gold${
+            completed.progression.levelUp ? ` — LEVEL UP! Level ${completed.progression.newLevel} 🌟` : ''
+          }`,
+          'success'
+        );
         getRpgProfile().then(setProfile).catch(() => undefined);
+      } else {
+        addToast('Quest was already completed', 'info');
       }
-      addToast('Quest completed! 🎉', 'success');
     } catch (err) {
       const e = err as Error;
       addToast(e.message ?? 'Failed to complete quest', 'error');
@@ -360,10 +366,12 @@ const QuestBoardPage: React.FC = () => {
             className={`pointer-events-auto px-4 py-3 rounded-rpg shadow-lg border text-sm font-medium animate-fade-in ${
               toast.type === 'success'
                 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                : 'bg-red-500/15 text-red-400 border-red-500/30'
+                : toast.type === 'info'
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                  : 'bg-red-500/15 text-red-400 border-red-500/30'
             }`}
           >
-            {toast.type === 'success' ? '✅' : '❌'} {toast.message}
+            {toast.type === 'success' ? '✅' : toast.type === 'info' ? 'ℹ️' : '❌'} {toast.message}
           </div>
         ))}
       </div>

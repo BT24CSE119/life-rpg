@@ -242,7 +242,7 @@ export interface UpdateQuestInput {
 }
 
 // ============================================================
-// --- Phase 4: RPG Progression Types ---
+// --- Phase 4 & 5: RPG Progression & Gold Types ---
 // ============================================================
 
 export interface RpgAttributes {
@@ -260,6 +260,7 @@ export interface ProgressionResult {
   currentLevelXp: number;
   nextLevelXp: number;
   progressPercent: number;
+  goldBalance: number;
   levelUp: boolean;
 }
 
@@ -270,17 +271,25 @@ export interface RpgProfile {
   currentLevelXp: number;
   nextLevelXp: number;
   progressPercent: number;
+  goldBalance: number;
   attributes: RpgAttributes;
 }
 
 export interface RewardResult {
   xpAwarded: number;
+  goldAwarded: number;
   reason: 'QUEST_COMPLETION';
+}
+
+export interface RewardsSummary {
+  xp: number;
+  gold: number;
 }
 
 export interface QuestCompletionResult {
   quest: Quest;
   reward: RewardResult;
+  rewards?: RewardsSummary;
   progression: ProgressionResult;
   duplicateCompletion: boolean;
 }
@@ -299,7 +308,38 @@ export interface XpHistoryResult {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+export type GoldTransactionType =
+  | 'QUEST_REWARD'
+  | 'BONUS'
+  | 'PENALTY'
+  | 'ADMIN_ADJUSTMENT'
+  | 'PURCHASE'
+  | 'REFUND';
+
+export type GoldReason = 'QUEST_COMPLETION' | 'BONUS';
+
+export interface GoldHistoryItem {
+  id: string;
+  amount: number;
+  balanceAfter: number;
+  type: GoldTransactionType;
+  reason: GoldReason;
+  questId: string | null;
+  questTitle: string | null;
+  createdAt: string;
+}
+
+export interface GoldHistoryResult {
+  items: GoldHistoryItem[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export interface GoldWalletResult {
+  goldBalance: number;
+}
+
 export interface RpgStats extends RpgProfile {
   completedQuests: number;
   totalQuests: number;
 }
+

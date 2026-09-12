@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import prisma from '../config/database';
-import { Prisma, QuestStatus, QuestPriority, XpReason } from '@prisma/client';
-import { calculateQuestXp, getLevelProgress } from '../utils/rpg';
+import { Prisma, QuestStatus, QuestPriority, XpReason, GoldTransactionType, GoldReason } from '@prisma/client';
+import { calculateQuestXp, calculateQuestGold, getLevelProgress } from '../utils/rpg';
 import { DEFAULT_PROFILE, PROFILE_SELECT } from './rpg.service';
 
 // ── Validation Schemas ────────────────────────────────────────────────────────
@@ -266,21 +266,78 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
       const quest = await tx.quest.findFirst({ where: { id: questId, userId }, select: QUEST_SELECT });
       if (!quest) throw notFoundError();
       const progress = getLevelProgress(profile.totalXp);
-      return { quest, reward: { xpAwarded: 0, reason: XpReason.QUEST_COMPLETION }, progression: { previousLevel: profile.level, newLevel: profile.level, ...progress, levelUp: false }, duplicateCompletion: true };
+      return {
+        quest,
+        reward: { xpAwarded: 0, goldAwarded: 0, reason: XpReason.QUEST_COMPLETION },
+        rewards: { xp: 0, gold: 0 },
+        progression: {
+          previousLevel: profile.level,
+          newLevel: profile.level,
+          ...progress,
+          goldBalance: profile.goldBalance,
+          levelUp: false,
+        },
+        rpg: {
+          level: profile.level,
+          totalXp: profile.totalXp,
+          currentXp: progress.currentLevelXp,
+          goldBalance: profile.goldBalance,
+          leveledUp: false,
+        },
+        duplicateCompletion: true,
+      };
     }
 
     const xpAwarded = calculateQuestXp(existing.priority);
-    await tx.xpTransaction.create({ data: { userId, questId, amount: xpAwarded, reason: XpReason.QUEST_COMPLETION } });
+    const goldAwarded = calculateQuestGold(existing.priority);
+
+    await tx.xpTransaction.create({
+      data: { userId, questId, amount: xpAwarded, reason: XpReason.QUEST_COMPLETION },
+    });
+
+    const newGoldBalance = profile.goldBalance + goldAwarded;
+
+    await tx.goldTransaction.create({
+      data: {
+        userId,
+        questId,
+        amount: goldAwarded,
+        balanceAfter: newGoldBalance,
+        type: GoldTransactionType.QUEST_REWARD,
+        reason: GoldReason.QUEST_COMPLETION,
+      },
+    });
+
     const totalXp = profile.totalXp + xpAwarded;
     const calculated = getLevelProgress(totalXp);
     const updatedProfile = await tx.playerProfile.update({
-      where: { userId }, data: { totalXp, level: calculated.level }, select: PROFILE_SELECT,
+      where: { userId },
+      data: {
+        totalXp,
+        level: calculated.level,
+        goldBalance: newGoldBalance,
+      },
+      select: PROFILE_SELECT,
     });
     const quest = await tx.quest.findUniqueOrThrow({ where: { id: questId }, select: QUEST_SELECT });
     return {
       quest,
-      reward: { xpAwarded, reason: XpReason.QUEST_COMPLETION },
-      progression: { previousLevel: profile.level, newLevel: updatedProfile.level, ...calculated, levelUp: updatedProfile.level > profile.level },
+      reward: { xpAwarded, goldAwarded, reason: XpReason.QUEST_COMPLETION },
+      rewards: { xp: xpAwarded, gold: goldAwarded },
+      progression: {
+        previousLevel: profile.level,
+        newLevel: updatedProfile.level,
+        ...calculated,
+        goldBalance: updatedProfile.goldBalance,
+        levelUp: updatedProfile.level > profile.level,
+      },
+      rpg: {
+        level: updatedProfile.level,
+        totalXp: updatedProfile.totalXp,
+        currentXp: calculated.currentLevelXp,
+        goldBalance: updatedProfile.goldBalance,
+        leveledUp: updatedProfile.level > profile.level,
+      },
       duplicateCompletion: false,
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -293,3 +350,5 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
   }
   throw new Error('Quest completion could not be finalized');
 };
+
+export const completeQuestWithRewards = completeQuestWithXp;
