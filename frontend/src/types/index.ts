@@ -390,6 +390,21 @@ export interface DashboardActivityItem {
   icon: string;
 }
 
+export interface DashboardEquippedItem {
+  id: string;
+  itemId: string;
+  name: string;
+  category: string;
+  iconEmoji?: string | null;
+  rarity: ItemRarity;
+}
+
+export interface DashboardAchievementsSummary {
+  totalCount: number;
+  unlockedCount: number;
+  recentUnlocked: AchievementItem[];
+}
+
 export interface DashboardData {
   player: DashboardPlayer;
   attributes: RpgAttributes;
@@ -399,6 +414,12 @@ export interface DashboardData {
   recentXpHistory: XpHistoryEntry[];
   recentGoldHistory: GoldHistoryItem[];
   recentActivity: DashboardActivityItem[];
+  streak?: StreakInfo;
+  dailyQuests?: DailyQuest[];
+  achievements?: DashboardAchievementsSummary;
+  inventoryCount?: number;
+  equipped?: DashboardEquippedItem[];
+  unreadNotificationsCount?: number;
 }
 
 export interface DashboardResponse {
@@ -406,5 +427,164 @@ export interface DashboardResponse {
   message: string;
   data: DashboardData;
 }
+
+// ============================================================
+// --- Phase 8: Advanced Features Types ---
+// ============================================================
+
+export interface DailyQuest {
+  id: string;
+  userId: string;
+  code: string;
+  title: string;
+  description: string | null;
+  difficulty: QuestDifficulty;
+  xpReward: number;
+  goldReward: number;
+  status: QuestStatusType;
+  date: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DailyQuestCompletionResult {
+  dailyQuest: DailyQuest;
+  reward: {
+    xpAwarded: number;
+    goldAwarded: number;
+    reason: string;
+  };
+  progression: ProgressionResult;
+  streak?: {
+    currentStreak: number;
+    longestStreak: number;
+    lastProductiveDate: string;
+    incremented: boolean;
+  };
+  unlockedAchievements?: AchievementItem[];
+  duplicateCompletion: boolean;
+}
+
+export interface WeeklyCalendarDay {
+  date: string;
+  dayName: string;
+  isActive: boolean;
+  isToday: boolean;
+}
+
+export interface StreakInfo {
+  currentStreak: number;
+  longestStreak: number;
+  lastProductiveDate: string | null;
+  nextMilestone: number;
+  motivation: string;
+  weeklyCalendar: WeeklyCalendarDay[];
+}
+
+export interface AchievementProgress {
+  current: number;
+  target: number;
+  percentage: number;
+}
+
+export interface AchievementItem {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  category: string;
+  rarity: ItemRarity;
+  xpReward: number;
+  goldReward: number;
+  iconEmoji: string;
+  badgeUrl: string | null;
+  isUnlocked: boolean;
+  unlockedAt: string | null;
+  progress: AchievementProgress;
+}
+
+export interface AchievementsData {
+  totalCount: number;
+  unlockedCount: number;
+  achievements: AchievementItem[];
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  type: ItemType;
+  rarity: ItemRarity;
+  category: string | null;
+  goldCost: number;
+  iconEmoji: string | null;
+  isActive: boolean;
+  ownedQuantity: number;
+  isEquipped: boolean;
+  canAfford: boolean;
+}
+
+export interface ShopData {
+  items: ShopItem[];
+  userGoldBalance: number;
+}
+
+export interface PurchaseResult {
+  item: ShopItem;
+  newGoldBalance: number;
+  inventory: InventoryItem;
+}
+
+export interface InventoryItem {
+  id: string;
+  userId: string;
+  itemId: string;
+  quantity: number;
+  isEquipped: boolean;
+  acquiredAt: string;
+  item: {
+    id: string;
+    name: string;
+    description: string;
+    type: ItemType;
+    rarity: ItemRarity;
+    category: string | null;
+    goldCost: number;
+    iconEmoji: string | null;
+  };
+}
+
+export type NotificationType =
+  | 'LEVEL_UP'
+  | 'ACHIEVEMENT_UNLOCKED'
+  | 'QUEST_COMPLETED'
+  | 'DAILY_QUEST'
+  | 'STREAK_MILESTONE'
+  | 'SHOP_PURCHASE'
+  | 'SYSTEM';
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isRead: boolean;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface NotificationsData {
+  items: NotificationItem[];
+  unreadCount: number;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 
 

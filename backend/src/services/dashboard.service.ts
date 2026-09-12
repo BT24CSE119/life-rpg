@@ -2,6 +2,9 @@ import prisma from '../config/database';
 import { QuestStatus } from '@prisma/client';
 import { calculateQuestGold, calculateQuestXp, getLevelProgress } from '../utils/rpg';
 import { getOrCreateProfile } from './rpg.service';
+import { getStreak } from './streak.service';
+import { generateDailyQuests } from './dailyQuest.service';
+import { getAchievements } from './achievement.service';
 
 export interface DashboardActivity {
   id: string;
@@ -25,6 +28,12 @@ export const getDashboardForUser = async (userId: string) => {
     rawRecentlyCompleted,
     xpTransactions,
     goldTransactions,
+    streakInfo,
+    dailyQuests,
+    achievementData,
+    equippedItems,
+    inventoryCount,
+    unreadNotificationsCount,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
@@ -97,6 +106,15 @@ export const getDashboardForUser = async (userId: string) => {
         quest: { select: { title: true } },
       },
     }),
+    getStreak(userId),
+    generateDailyQuests(userId),
+    getAchievements(userId, false),
+    prisma.inventory.findMany({
+      where: { userId, isEquipped: true },
+      include: { item: true },
+    }),
+    prisma.inventory.count({ where: { userId } }),
+    prisma.notification.count({ where: { userId, isRead: false } }),
   ]);
 
   if (!user) {
@@ -126,7 +144,7 @@ export const getDashboardForUser = async (userId: string) => {
     amount: tx.amount,
     reason: tx.reason,
     createdAt: tx.createdAt,
-    questTitle: tx.quest?.title ?? null,
+    questTitle: tx.quest?.title ?? 'Achievement / Mission Award',
   }));
 
   const recentGoldHistory = goldTransactions.map((tx) => ({
@@ -136,7 +154,7 @@ export const getDashboardForUser = async (userId: string) => {
     type: tx.type,
     reason: tx.reason,
     createdAt: tx.createdAt,
-    questTitle: tx.quest?.title ?? null,
+    questTitle: tx.quest?.title ?? 'Achievement / Reward',
   }));
 
   // Build unified recent activities
@@ -181,6 +199,15 @@ export const getDashboardForUser = async (userId: string) => {
   activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   const recentActivity = activities.slice(0, 10);
 
+  const equipped = equippedItems.map((eq) => ({
+    id: eq.id,
+    itemId: eq.itemId,
+    name: eq.item.name,
+    category: eq.item.category || eq.item.type,
+    iconEmoji: eq.item.iconEmoji,
+    rarity: eq.item.rarity,
+  }));
+
   return {
     player: {
       name: user.username,
@@ -212,5 +239,15 @@ export const getDashboardForUser = async (userId: string) => {
     recentXpHistory,
     recentGoldHistory,
     recentActivity,
+    streak: streakInfo,
+    dailyQuests,
+    achievements: {
+      totalCount: achievementData.totalCount,
+      unlockedCount: achievementData.unlockedCount,
+      recentUnlocked: achievementData.achievements.filter((a) => a.isUnlocked).slice(0, 3),
+    },
+    inventoryCount,
+    equipped,
+    unreadNotificationsCount,
   };
 };

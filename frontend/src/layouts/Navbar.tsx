@@ -3,8 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageContainer from './PageContainer';
 import RPGButton from '../components/RPGButton';
 import GoldBadge from '../components/GoldBadge';
+import NotificationCenter from '../components/NotificationCenter';
 import { useAuth } from '../hooks/useAuth';
 import { getWallet } from '../services/rpg';
+import { getUnreadNotificationCount } from '../services/notification';
 
 const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
@@ -19,16 +21,22 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout, isLoading } = useAuth();
   const [goldBalance, setGoldBalance] = useState<number | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const isLanding = location.pathname === '/';
 
-  // Fetch wallet balance when authenticated
+  // Fetch wallet balance and unread notification count when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       getWallet()
         .then((data) => setGoldBalance(data.goldBalance))
         .catch(() => setGoldBalance(null));
+
+      getUnreadNotificationCount()
+        .then((data) => setUnreadCount(data.unreadCount))
+        .catch(() => setUnreadCount(0));
     } else {
       setGoldBalance(null);
+      setUnreadCount(0);
     }
   }, [isAuthenticated, location.pathname]);
 
@@ -76,7 +84,7 @@ const Navbar: React.FC = () => {
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-1.5" role="list">
+          <div className="hidden lg:flex items-center gap-1.5" role="list">
             {isLanding && NAV_LINKS.map((link) => (
               <a
                 key={link.href}
@@ -91,7 +99,7 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/dashboard"
-                  className={`relative px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
                     isActive('/dashboard')
                       ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
                       : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
@@ -102,7 +110,7 @@ const Navbar: React.FC = () => {
                 </Link>
                 <Link
                   to="/quests"
-                  className={`relative px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
                     isActive('/quests')
                       ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
                       : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
@@ -112,15 +120,48 @@ const Navbar: React.FC = () => {
                   <span aria-hidden="true">📜</span> Quests
                 </Link>
                 <Link
+                  to="/shop"
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                    isActive('/shop')
+                      ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
+                      : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
+                  }`}
+                  role="listitem"
+                >
+                  <span aria-hidden="true">🪙</span> Shop
+                </Link>
+                <Link
+                  to="/inventory"
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                    isActive('/inventory')
+                      ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
+                      : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
+                  }`}
+                  role="listitem"
+                >
+                  <span aria-hidden="true">🎒</span> Inventory
+                </Link>
+                <Link
+                  to="/achievements"
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                    isActive('/achievements')
+                      ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
+                      : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
+                  }`}
+                  role="listitem"
+                >
+                  <span aria-hidden="true">🏆</span> Trophies
+                </Link>
+                <Link
                   to="/rpg"
-                  className={`relative px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
                     isActive('/rpg')
                       ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
                       : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
                   }`}
                   role="listitem"
                 >
-                  <span aria-hidden="true">✦</span> Progression
+                  <span aria-hidden="true">✦</span> Progress
                 </Link>
               </>
             )}
@@ -130,10 +171,12 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-3">
             {!isLoading && isAuthenticated ? (
               <>
+                <NotificationCenter initialUnreadCount={unreadCount} />
+
                 {goldBalance !== null && (
                   <Link
-                    to="/rpg"
-                    title="View Treasury & Gold Ledger"
+                    to="/shop"
+                    title="View Guild Treasury & Bazaar"
                     className="hover:scale-105 active:scale-95 transition-transform"
                   >
                     <GoldBadge amount={goldBalance} size="sm" />
@@ -168,29 +211,33 @@ const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile hamburger */}
-          <button
-            className="md:hidden flex flex-col gap-1.5 p-2 rounded-lg hover:bg-rpg-surface-2 border border-rpg-border/40 transition-colors"
-            onClick={() => setMobileOpen((o) => !o)}
-            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-menu"
-          >
-            <span
-              className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
-                mobileOpen ? 'rotate-45 translate-y-2 bg-amber-400' : ''
-              }`}
-            />
-            <span
-              className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
-                mobileOpen ? 'opacity-0' : ''
-              }`}
-            />
-            <span
-              className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
-                mobileOpen ? '-rotate-45 -translate-y-2 bg-amber-400' : ''
-              }`}
-            />
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            {isAuthenticated && <NotificationCenter initialUnreadCount={unreadCount} />}
+
+            <button
+              className="flex flex-col gap-1.5 p-2 rounded-lg hover:bg-rpg-surface-2 border border-rpg-border/40 transition-colors"
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
+            >
+              <span
+                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
+                  mobileOpen ? 'rotate-45 translate-y-2 bg-amber-400' : ''
+                }`}
+              />
+              <span
+                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
+                  mobileOpen ? 'opacity-0' : ''
+                }`}
+              />
+              <span
+                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
+                  mobileOpen ? '-rotate-45 -translate-y-2 bg-amber-400' : ''
+                }`}
+              />
+            </button>
+          </div>
         </nav>
 
         {/* Mobile menu */}
@@ -217,7 +264,7 @@ const Navbar: React.FC = () => {
                   <Link
                     to="/dashboard"
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
                       isActive('/dashboard') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
@@ -226,23 +273,50 @@ const Navbar: React.FC = () => {
                   <Link
                     to="/quests"
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
                       isActive('/quests') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
                     <span>📜</span> Quests
                   </Link>
                   <Link
-                    to="/rpg"
+                    to="/shop"
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-between ${
-                      isActive('/rpg') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-between ${
+                      isActive('/shop') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
                     <span className="flex items-center gap-2">
-                      <span>✦</span> Progress & Treasury
+                      <span>🪙</span> Guild Shop
                     </span>
                     {goldBalance !== null && <GoldBadge amount={goldBalance} size="sm" />}
+                  </Link>
+                  <Link
+                    to="/inventory"
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                      isActive('/inventory') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                    }`}
+                  >
+                    <span>🎒</span> Inventory
+                  </Link>
+                  <Link
+                    to="/achievements"
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                      isActive('/achievements') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                    }`}
+                  >
+                    <span>🏆</span> Trophies & Achievements
+                  </Link>
+                  <Link
+                    to="/rpg"
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                      isActive('/rpg') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                    }`}
+                  >
+                    <span>✦</span> Character Progression
                   </Link>
                 </>
               )}

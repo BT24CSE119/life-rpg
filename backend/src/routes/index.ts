@@ -4,6 +4,12 @@ import authRouter from './auth';
 import questRouter from './quest';
 import rpgRouter from './rpg';
 import dashboardRouter from './dashboard';
+import dailyQuestRouter from './dailyQuest';
+import streakRouter from './streak';
+import achievementRouter from './achievement';
+import shopRouter from './shop';
+import inventoryRouter from './inventory';
+import notificationRouter from './notification';
 
 const router = Router();
 
@@ -13,5 +19,11 @@ router.use('/auth', authRouter);
 router.use('/quests', questRouter);
 router.use('/rpg', rpgRouter);
 router.use('/dashboard', dashboardRouter);
+router.use('/daily-quests', dailyQuestRouter);
+router.use('/streak', streakRouter);
+router.use('/achievements', achievementRouter);
+router.use('/shop', shopRouter);
+router.use('/inventory', inventoryRouter);
+router.use('/notifications', notificationRouter);
 
 export default router;

@@ -7,14 +7,19 @@ import AttributesCard from '../components/AttributesCard';
 import QuestSummaryCards from '../components/QuestSummaryCards';
 import ActiveQuestsSection from '../components/ActiveQuestsSection';
 import RecentActivitySection from '../components/RecentActivitySection';
+import StreakCard from '../components/StreakCard';
+import DailyMissionsSection from '../components/DailyMissionsSection';
+import AchievementsPreviewCard from '../components/AchievementsPreviewCard';
 import QuestFormModal from '../components/QuestFormModal';
 import LevelUpModal from '../components/LevelUpModal';
 import FloatingReward, { FloatingRewardItem } from '../components/FloatingReward';
 import { getDashboardData } from '../services/dashboard';
 import { createQuest, completeQuest } from '../services/quest';
+import { completeDailyQuest } from '../services/dailyQuest';
 import type {
   DashboardData,
   DashboardQuestItem,
+  DailyQuest,
   CreateQuestInput,
   UpdateQuestInput,
 } from '../types';
@@ -56,6 +61,7 @@ const DashboardPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [completingDailyId, setCompletingDailyId] = useState<string | null>(null);
 
   // Level up & floating reward animations
   const [levelUpData, setLevelUpData] = useState<{
@@ -145,6 +151,57 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  // Handle complete daily mission
+  const handleCompleteDailyQuest = async (mission: DailyQuest) => {
+    setCompletingDailyId(mission.id);
+    try {
+      const result = await completeDailyQuest(mission.id);
+      if (!result.duplicateCompletion) {
+        const rewardKey = Date.now();
+        setFloatingRewards((prev) => [
+          ...prev,
+          {
+            id: rewardKey,
+            xp: result.reward.xpAwarded,
+            gold: result.reward.goldAwarded,
+          },
+        ]);
+        setTimeout(() => {
+          setFloatingRewards((prev) => prev.filter((r) => r.id !== rewardKey));
+        }, 1300);
+
+        if (result.progression.levelUp) {
+          setLevelUpData({
+            isOpen: true,
+            newLevel: result.progression.newLevel,
+            xpEarned: result.reward.xpAwarded,
+            goldEarned: result.reward.goldAwarded,
+          });
+        } else {
+          addToast(
+            `+${result.reward.xpAwarded} XP · +${result.reward.goldAwarded} Gold`,
+            'success'
+          );
+        }
+
+        if (result.unlockedAchievements && result.unlockedAchievements.length > 0) {
+          result.unlockedAchievements.forEach((ach) => {
+            addToast(`🏆 Achievement Unlocked: ${ach.title}!`, 'success');
+          });
+        }
+      } else {
+        addToast('Daily mission was already completed', 'info');
+      }
+
+      const updated = await getDashboardData();
+      setData(updated);
+    } catch (err) {
+      addToast((err as Error).message || 'Failed to complete daily mission', 'error');
+    } finally {
+      setCompletingDailyId(null);
+    }
+  };
+
   // Handle quest creation from dashboard modal
   const handleCreateQuest = async (input: CreateQuestInput | UpdateQuestInput) => {
     setCreateLoading(true);
@@ -163,6 +220,8 @@ const DashboardPage: React.FC = () => {
   };
 
   const lore = data ? getGreetingLore(data.player.level) : null;
+  const equippedTitle = data?.equipped?.find((e) => e.category === 'TITLE')?.name;
+  const equippedFrame = data?.equipped?.find((e) => e.category === 'AVATAR_FRAME');
 
   return (
     <div className="min-h-screen pt-20 pb-16">
@@ -170,12 +229,13 @@ const DashboardPage: React.FC = () => {
         {/* Loading Skeleton */}
         {isLoading ? (
           <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Loading Adventurer Dashboard">
-            <div className="h-24 bg-rpg-surface rounded-xl border border-rpg-border" />
+            <div className="h-28 bg-rpg-surface rounded-xl border border-rpg-border" />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="h-60 bg-rpg-surface rounded-xl border border-rpg-border" />
               <div className="h-60 bg-rpg-surface rounded-xl border border-rpg-border" />
               <div className="h-60 bg-rpg-surface rounded-xl border border-rpg-border" />
             </div>
+            <div className="h-48 bg-rpg-surface rounded-xl border border-rpg-border" />
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="h-28 bg-rpg-surface rounded-xl border border-rpg-border" />
@@ -205,7 +265,9 @@ const DashboardPage: React.FC = () => {
         ) : data ? (
           <div className="space-y-6 animate-fade-in">
             {/* ── 1. Personalized Hero Header ───────────────────────────────── */}
-            <header className="relative bg-gradient-to-r from-rpg-surface via-rpg-surface-2/60 to-rpg-surface border border-rpg-border rounded-xl p-6 sm:p-7 shadow-sm overflow-hidden">
+            <header className={`relative bg-gradient-to-r from-rpg-surface via-rpg-surface-2/60 to-rpg-surface border rounded-xl p-6 sm:p-7 shadow-sm overflow-hidden transition-all ${
+              equippedFrame ? 'border-amber-500/60 shadow-[0_0_20px_rgba(245,200,66,0.15)]' : 'border-rpg-border'
+            }`}>
               {/* Background ambient rune effect */}
               <div
                 className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-amber-500/5 to-transparent pointer-events-none"
@@ -217,8 +279,13 @@ const DashboardPage: React.FC = () => {
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-950/60 text-amber-300 border border-amber-500/30">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" aria-hidden="true" />
-                      {lore?.title}
+                      {equippedTitle || lore?.title}
                     </span>
+                    {equippedFrame && (
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-950/60 text-purple-300 border border-purple-500/30">
+                        {equippedFrame.iconEmoji} {equippedFrame.name}
+                      </span>
+                    )}
                     <span className="text-xs text-rpg-text-faint">
                       Kingdom of Life RPG
                     </span>
@@ -241,6 +308,10 @@ const DashboardPage: React.FC = () => {
                       <span aria-hidden="true">⚔️</span> {data.quests.active} Active Quest{data.quests.active !== 1 ? 's' : ''}
                     </span>
                     <span>·</span>
+                    <span className="text-orange-400 font-semibold flex items-center gap-1">
+                      <span aria-hidden="true">🔥</span> {data.streak?.currentStreak ?? 0}-Day Streak
+                    </span>
+                    <span>·</span>
                     <span className="text-emerald-400 font-semibold flex items-center gap-1">
                       <span aria-hidden="true">🏆</span> {data.quests.completed} Fulfilled
                     </span>
@@ -256,23 +327,23 @@ const DashboardPage: React.FC = () => {
                     <span aria-hidden="true">➕</span> New Quest
                   </button>
                   <Link
-                    to="/quests"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold bg-rpg-surface-2 border border-rpg-border hover:border-amber-500/40 text-rpg-text hover:text-amber-300 active:scale-95 transition-all"
+                    to="/shop"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold bg-rpg-surface-2 border border-amber-500/30 hover:border-amber-500 text-amber-300 hover:brightness-110 active:scale-95 transition-all"
                   >
-                    <span aria-hidden="true">📜</span> Quest Board
+                    <span aria-hidden="true">🪙</span> Guild Shop
                   </Link>
                   <Link
-                    to="/rpg"
+                    to="/inventory"
                     className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold bg-rpg-surface-2 border border-rpg-border hover:border-amber-500/40 text-rpg-text hover:text-amber-300 active:scale-95 transition-all"
                   >
-                    <span aria-hidden="true">✦</span> Character Sheet
+                    <span aria-hidden="true">🎒</span> Inventory
                   </Link>
                 </div>
               </div>
             </header>
 
-            {/* ── 2. Top Progress & Treasury Section ──────────────────────── */}
-            <section aria-label="Adventurer Progression & Treasury" className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* ── 2. Top Progress, Treasury & Streak Section ────────────────── */}
+            <section aria-label="Progression, Treasury and Streak" className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-1">
                 <RpgProgressCard
                   profile={{
@@ -294,16 +365,25 @@ const DashboardPage: React.FC = () => {
                 />
               </div>
               <div className="lg:col-span-1">
-                <AttributesCard attributes={data.attributes} />
+                <StreakCard streak={data.streak} />
               </div>
             </section>
 
-            {/* ── 3. Quest Metrics Summary Cards ──────────────────────────── */}
+            {/* ── 3. Daily Missions Section ─────────────────────────────────── */}
+            {data.dailyQuests && data.dailyQuests.length > 0 && (
+              <DailyMissionsSection
+                missions={data.dailyQuests}
+                onComplete={handleCompleteDailyQuest}
+                completingId={completingDailyId}
+              />
+            )}
+
+            {/* ── 4. Quest Metrics Summary Cards ──────────────────────────── */}
             <section aria-label="Quest Metrics Overview">
               <QuestSummaryCards summary={data.quests} />
             </section>
 
-            {/* ── 4. Main Operations Grid ─────────────────────────────────── */}
+            {/* ── 5. Main Operations Grid ─────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left 2 Cols: Active Quests & Completed */}
               <div className="lg:col-span-2 space-y-6">
@@ -362,8 +442,14 @@ const DashboardPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Right 1 Col: Recent Activity & Quick Shortcuts */}
+              {/* Right 1 Col: Attributes, Achievements, Activity & Shortcuts */}
               <div className="space-y-6">
+                <AttributesCard attributes={data.attributes} />
+
+                {/* Achievements Preview */}
+                <AchievementsPreviewCard achievements={data.achievements} />
+
+                {/* Chronicle Activity Feed */}
                 <RecentActivitySection activities={data.recentActivity} />
 
                 {/* Quick Navigation Directory */}
@@ -385,23 +471,32 @@ const DashboardPage: React.FC = () => {
                       <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
                     </Link>
                     <Link
-                      to="/rpg"
-                      className="group flex items-center justify-between p-2.5 rounded-lg bg-rpg-surface-2/60 hover:bg-rpg-surface-2 border border-transparent hover:border-rpg-border transition-all text-xs font-semibold text-rpg-text hover:text-amber-300"
+                      to="/shop"
+                      className="group flex items-center justify-between p-2.5 rounded-lg bg-rpg-surface-2/60 hover:bg-rpg-surface-2 border border-transparent hover:border-amber-500/30 transition-all text-xs font-semibold text-amber-300"
                     >
                       <span className="flex items-center gap-2">
-                        <span aria-hidden="true">🪙</span> Treasury & Gold Ledger
+                        <span aria-hidden="true">🪙</span> Guild Shop & Bazaar
                       </span>
                       <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
                     </Link>
-                    <button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="w-full group flex items-center justify-between p-2.5 rounded-lg bg-rpg-surface-2/60 hover:bg-rpg-surface-2 border border-transparent hover:border-amber-500/30 transition-all text-xs font-semibold text-amber-300 text-left"
+                    <Link
+                      to="/inventory"
+                      className="group flex items-center justify-between p-2.5 rounded-lg bg-rpg-surface-2/60 hover:bg-rpg-surface-2 border border-transparent hover:border-rpg-border transition-all text-xs font-semibold text-rpg-text hover:text-amber-300"
                     >
                       <span className="flex items-center gap-2">
-                        <span aria-hidden="true">➕</span> Forge New Quest
+                        <span aria-hidden="true">🎒</span> Inventory & Gear
                       </span>
-                      <span className="transition-transform group-hover:scale-125" aria-hidden="true">+</span>
-                    </button>
+                      <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                    </Link>
+                    <Link
+                      to="/achievements"
+                      className="group flex items-center justify-between p-2.5 rounded-lg bg-rpg-surface-2/60 hover:bg-rpg-surface-2 border border-transparent hover:border-rpg-border transition-all text-xs font-semibold text-rpg-text hover:text-amber-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span aria-hidden="true">🏆</span> Hall of Achievements
+                      </span>
+                      <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                    </Link>
                   </div>
                 </nav>
               </div>

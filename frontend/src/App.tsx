@@ -10,6 +10,9 @@ import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import QuestBoardPage from './pages/QuestBoardPage';
 import RpgPage from './pages/RpgPage';
+import ShopPage from './pages/ShopPage';
+import InventoryPage from './pages/InventoryPage';
+import AchievementsPage from './pages/AchievementsPage';
 import HealthStatus from './components/HealthStatus';
 
 const App: React.FC = () => {
@@ -51,6 +54,9 @@ const App: React.FC = () => {
               }
             />
             <Route path="/rpg" element={<ProtectedRoute><RpgPage /></ProtectedRoute>} />
+            <Route path="/shop" element={<ProtectedRoute><ShopPage /></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
+            <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
 
             {/* 404 catch-all */}
             <Route

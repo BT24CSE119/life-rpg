@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import prisma from '../config/database';
-import { Prisma, QuestStatus, QuestPriority, XpReason, GoldTransactionType, GoldReason } from '@prisma/client';
+import { Prisma, QuestStatus, QuestPriority, XpReason, GoldTransactionType, GoldReason, NotificationType } from '@prisma/client';
 import { calculateQuestXp, calculateQuestGold, getLevelProgress } from '../utils/rpg';
 import { DEFAULT_PROFILE, PROFILE_SELECT } from './rpg.service';
+import { recordProductiveDay } from './streak.service';
+import { checkAndUnlockAchievements } from './achievement.service';
+import { createNotification } from './notification.service';
 
 // ── Validation Schemas ────────────────────────────────────────────────────────
 
@@ -319,7 +322,22 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
       },
       select: PROFILE_SELECT,
     });
+
+    // Record streak for today
+    await recordProductiveDay(userId, tx);
+
     const quest = await tx.quest.findUniqueOrThrow({ where: { id: questId }, select: QUEST_SELECT });
+
+    // Send quest completed notification
+    await createNotification(
+      userId,
+      NotificationType.QUEST_COMPLETED,
+      `⚔️ Quest Fulfilled: ${quest.title}`,
+      `You completed ${quest.title}! (+${xpAwarded} XP, +${goldAwarded} Gold)`,
+      { questId: quest.id, xpAwarded, goldAwarded },
+      tx
+    );
+
     return {
       quest,
       reward: { xpAwarded, goldAwarded, reason: XpReason.QUEST_COMPLETION },

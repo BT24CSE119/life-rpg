@@ -26,6 +26,9 @@ model User {
   xpTransactions   XpTransaction[]
   goldTransactions GoldTransaction[]
   refreshTokens    RefreshToken[]
+  dailyQuests      DailyQuest[]
+  userAchievements UserAchievement[]
+  notifications    Notification[]
 
   @@index([email])
   @@index([username])
@@ -98,19 +101,22 @@ model Quest {
 
 /// Authoritative Phase 4 progression state for a user.
 model PlayerProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  totalXp      Int      @default(0)
-  level        Int      @default(1)
-  goldBalance  Int      @default(0)
-  strength     Int      @default(1)
-  intelligence Int      @default(1)
-  discipline   Int      @default(1)
-  stamina      Int      @default(1)
-  consistency  Int      @default(1)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  totalXp            Int      @default(0)
+  level              Int      @default(1)
+  goldBalance        Int      @default(0)
+  strength           Int      @default(1)
+  intelligence       Int      @default(1)
+  discipline         Int      @default(1)
+  stamina            Int      @default(1)
+  consistency        Int      @default(1)
+  currentStreak      Int      @default(0)
+  longestStreak      Int      @default(0)
+  lastProductiveDate String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("player_profiles")
@@ -139,12 +145,12 @@ model GoldTransaction {
 model XpTransaction {
   id        String   @id @default(cuid())
   userId    String
-  questId   String   @unique
+  questId   String?  @unique
   amount    Int
   reason    XpReason
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quest     Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+  quest     Quest?   @relation(fields: [questId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
@@ -170,6 +176,82 @@ model QuestCompletion {
   @@map("quest_completions")
 }
 
+/// Daily Missions generated once per day per user
+model DailyQuest {
+  id          String          @id @default(cuid())
+  userId      String
+  code        String
+  title       String
+  description String?
+  difficulty  QuestDifficulty @default(MEDIUM)
+  xpReward    Int             @default(30)
+  goldReward  Int             @default(15)
+  status      QuestStatus     @default(TODO)
+  date        String          // Format: YYYY-MM-DD
+  completedAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, code])
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, status])
+  @@map("daily_quests")
+}
+
+/// System-defined achievements that can be earned
+model Achievement {
+  id               String            @id @default(cuid())
+  code             String            @unique
+  title            String
+  description      String
+  category         String            @default("GENERAL")
+  rarity           ItemRarity        @default(COMMON)
+  xpReward         Int               @default(50)
+  goldReward       Int               @default(25)
+  iconEmoji        String            @default("🏆")
+  badgeUrl         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+/// Achievements unlocked by a user
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@map("user_achievements")
+}
+
+/// Real-time user notification
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
 /// A shop item that can be purchased with Gold
 model Item {
   id          String      @id @default(cuid())
@@ -177,6 +259,7 @@ model Item {
   description String
   type        ItemType
   rarity      ItemRarity  @default(COMMON)
+  category    String?
   xpBonus     Int         @default(0)
   goldBonus   Int         @default(0)
   hpBonus     Int         @default(0)
@@ -276,6 +359,8 @@ enum QuestStatus {
 
 enum XpReason {
   QUEST_COMPLETION
+  DAILY_QUEST_COMPLETION
+  ACHIEVEMENT_UNLOCKED
 }
 
 enum GoldTransactionType {
@@ -289,7 +374,20 @@ enum GoldTransactionType {
 
 enum GoldReason {
   QUEST_COMPLETION
+  DAILY_QUEST_COMPLETION
+  ACHIEVEMENT_UNLOCKED
   BONUS
+  SHOP_PURCHASE
+}
+
+enum NotificationType {
+  LEVEL_UP
+  ACHIEVEMENT_UNLOCKED
+  QUEST_COMPLETED
+  DAILY_QUEST
+  STREAK_MILESTONE
+  SHOP_PURCHASE
+  SYSTEM
 }
 
 enum ItemType {
@@ -312,11 +410,15 @@ enum ItemRarity {
 enum LogAction {
   QUEST_CREATED
   QUEST_COMPLETED
+  DAILY_QUEST_COMPLETED
   QUEST_FAILED
   QUEST_ABANDONED
   LEVEL_UP
   ITEM_PURCHASED
+  ITEM_EQUIPPED
+  ITEM_UNEQUIPPED
   STREAK_MILESTONE
+  ACHIEVEMENT_UNLOCKED
   CHARACTER_CREATED
   ATTRIBUTE_INCREASED
 }

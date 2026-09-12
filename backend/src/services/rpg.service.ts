@@ -12,6 +12,9 @@ const PROFILE_SELECT = {
   discipline: true,
   stamina: true,
   consistency: true,
+  currentStreak: true,
+  longestStreak: true,
+  lastProductiveDate: true,
 } as const;
 
 const DEFAULT_PROFILE = {
@@ -23,15 +26,29 @@ const DEFAULT_PROFILE = {
   discipline: 1,
   stamina: 1,
   consistency: 1,
+  currentStreak: 0,
+  longestStreak: 0,
+  lastProductiveDate: null,
 };
 
-export const getOrCreateProfile = async (userId: string) =>
-  prisma.playerProfile.upsert({
-    where: { userId },
-    create: { userId, ...DEFAULT_PROFILE },
-    update: {},
-    select: PROFILE_SELECT,
-  });
+export const getOrCreateProfile = async (userId: string) => {
+  try {
+    return await prisma.playerProfile.upsert({
+      where: { userId },
+      create: { userId, ...DEFAULT_PROFILE },
+      update: {},
+      select: PROFILE_SELECT,
+    });
+  } catch (err: any) {
+    if (err?.code === 'P2002') {
+      return prisma.playerProfile.findUniqueOrThrow({
+        where: { userId },
+        select: PROFILE_SELECT,
+      });
+    }
+    throw err;
+  }
+};
 
 export const toProfileResponse = (profile: Awaited<ReturnType<typeof getOrCreateProfile>>) => {
   const progress = getLevelProgress(profile.totalXp);
@@ -39,6 +56,9 @@ export const toProfileResponse = (profile: Awaited<ReturnType<typeof getOrCreate
     userId: profile.userId,
     ...progress,
     goldBalance: profile.goldBalance,
+    currentStreak: profile.currentStreak,
+    longestStreak: profile.longestStreak,
+    lastProductiveDate: profile.lastProductiveDate,
     attributes: {
       strength: profile.strength,
       intelligence: profile.intelligence,
@@ -73,7 +93,7 @@ export const getXpHistory = async (userId: string, page: number, limit: number) 
   return {
     entries: transactions.map(({ quest, ...transaction }) => ({
       ...transaction,
-      questTitle: quest.title,
+      questTitle: quest?.title ?? 'Adventure Accomplishment',
     })),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
