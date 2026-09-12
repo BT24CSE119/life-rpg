@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "postinstall": "prisma generate",
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit",
     "test:rpg": "tsx --test tests/rpg.integration.test.ts",
