@@ -11,6 +11,8 @@ import QuestCard from '../components/QuestCard';
 import QuestFormModal from '../components/QuestFormModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import RpgProgressCard from '../components/RpgProgressCard';
+import LevelUpModal from '../components/LevelUpModal';
+import FloatingReward, { FloatingRewardItem } from '../components/FloatingReward';
 import { getRpgProfile } from '../services/rpg';
 
 // ── Filter Configs ────────────────────────────────────────────────────────────
@@ -64,6 +66,18 @@ const QuestBoardPage: React.FC = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
+
+  // Level up & floating reward animations
+  const [levelUpData, setLevelUpData] = useState<{
+    isOpen: boolean;
+    newLevel: number;
+    xpEarned?: number;
+    goldEarned?: number;
+  }>({
+    isOpen: false,
+    newLevel: 1,
+  });
+  const [floatingRewards, setFloatingRewards] = useState<FloatingRewardItem[]>([]);
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -140,7 +154,7 @@ const QuestBoardPage: React.FC = () => {
     } catch (err) {
       const e = err as Error;
       addToast(e.message ?? 'Operation failed', 'error');
-      throw err; // Let the form display the error too
+      throw err;
     } finally {
       setFormLoading(false);
     }
@@ -174,12 +188,33 @@ const QuestBoardPage: React.FC = () => {
         prev.map((q) => (q.id === completed.quest.id ? completed.quest : q))
       );
       if (!completed.duplicateCompletion) {
-        addToast(
-          `+${completed.reward.xpAwarded} XP · +${completed.reward.goldAwarded} Gold${
-            completed.progression.levelUp ? ` — LEVEL UP! Level ${completed.progression.newLevel} 🌟` : ''
-          }`,
-          'success'
-        );
+        // Floating reward badge animation
+        const rewardKey = Date.now();
+        setFloatingRewards((prev) => [
+          ...prev,
+          {
+            id: rewardKey,
+            xp: completed.reward.xpAwarded,
+            gold: completed.reward.goldAwarded,
+          },
+        ]);
+        setTimeout(() => {
+          setFloatingRewards((prev) => prev.filter((r) => r.id !== rewardKey));
+        }, 1300);
+
+        if (completed.progression.levelUp) {
+          setLevelUpData({
+            isOpen: true,
+            newLevel: completed.progression.newLevel,
+            xpEarned: completed.reward.xpAwarded,
+            goldEarned: completed.reward.goldAwarded,
+          });
+        } else {
+          addToast(
+            `+${completed.reward.xpAwarded} XP · +${completed.reward.goldAwarded} Gold`,
+            'success'
+          );
+        }
         getRpgProfile().then(setProfile).catch(() => undefined);
       } else {
         addToast('Quest was already completed', 'info');
@@ -204,12 +239,12 @@ const QuestBoardPage: React.FC = () => {
               📜 Quest Board
             </h1>
             <p className="text-rpg-text-muted text-sm">
-              Turn your real-life goals into completed quests.
+              Turn your real-life goals into completed quests and claim server-verified XP and Gold.
             </p>
           </div>
           <button
             onClick={handleCreate}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-rpg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 active:scale-[0.98] transition-all shadow-rpg-gold"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 active:scale-95 transition-all shadow-rpg-gold"
           >
             ➕ New Quest
           </button>
@@ -225,9 +260,9 @@ const QuestBoardPage: React.FC = () => {
               <button
                 key={f.value}
                 onClick={() => setStatusFilter(f.value)}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-rpg-sm text-xs font-medium border transition-all ${
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                   statusFilter === f.value
-                    ? 'bg-rpg-gold/15 text-rpg-gold border-rpg-gold/40'
+                    ? 'bg-amber-950/60 text-amber-300 border-amber-500/40 shadow-sm'
                     : 'bg-rpg-surface text-rpg-text-muted border-rpg-border hover:border-rpg-border-2'
                 }`}
               >
@@ -243,9 +278,9 @@ const QuestBoardPage: React.FC = () => {
               <button
                 key={f.value}
                 onClick={() => setPriorityFilter(f.value)}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-rpg-sm text-xs font-medium border transition-all ${
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                   priorityFilter === f.value
-                    ? 'bg-rpg-arcane/15 text-rpg-arcane-light border-rpg-arcane/40'
+                    ? 'bg-purple-950/60 text-purple-300 border-purple-500/40 shadow-sm'
                     : 'bg-rpg-surface text-rpg-text-muted border-rpg-border hover:border-rpg-border-2'
                 }`}
               >
@@ -259,11 +294,11 @@ const QuestBoardPage: React.FC = () => {
         {/* Content */}
         {isLoading ? (
           // Loading state
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 animate-pulse">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="bg-rpg-surface border border-rpg-border rounded-rpg-lg p-5 animate-pulse"
+                className="bg-rpg-surface border border-rpg-border rounded-xl p-5"
               >
                 <div className="flex gap-2 mb-3">
                   <div className="h-5 w-16 bg-rpg-surface-3 rounded-full" />
@@ -282,7 +317,7 @@ const QuestBoardPage: React.FC = () => {
           </div>
         ) : error ? (
           // Error state
-          <div className="text-center py-16">
+          <div className="text-center py-16 bg-rpg-surface border border-rpg-border rounded-xl">
             <div className="text-5xl mb-4" aria-hidden="true">💀</div>
             <h2 className="font-display text-xl font-bold text-rpg-text mb-2">
               Something went wrong
@@ -292,24 +327,24 @@ const QuestBoardPage: React.FC = () => {
             </p>
             <button
               onClick={loadQuests}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-rpg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 transition-all active:scale-95"
             >
               🔄 Retry
             </button>
           </div>
         ) : quests.length === 0 ? (
           // Empty state
-          <div className="text-center py-16">
+          <div className="text-center py-16 bg-rpg-surface border border-rpg-border rounded-xl">
             <div className="text-6xl mb-4" aria-hidden="true">📜</div>
             <h2 className="font-display text-xl font-bold text-rpg-text mb-2">
               No quests yet
             </h2>
             <p className="text-rpg-text-muted text-sm mb-6 max-w-sm mx-auto">
-              Create your first quest and start your adventure.
+              Create your first quest and begin your heroic journey.
             </p>
             <button
               onClick={handleCreate}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-rpg-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 transition-all shadow-rpg-gold"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 transition-all shadow-rpg-gold active:scale-95"
             >
               ⚔️ Create Your First Quest
             </button>
@@ -356,6 +391,18 @@ const QuestBoardPage: React.FC = () => {
         isLoading={deleteLoading}
       />
 
+      {/* Level Up Celebratory Modal */}
+      <LevelUpModal
+        isOpen={levelUpData.isOpen}
+        onClose={() => setLevelUpData((prev) => ({ ...prev, isOpen: false }))}
+        newLevel={levelUpData.newLevel}
+        xpEarned={levelUpData.xpEarned}
+        goldEarned={levelUpData.goldEarned}
+      />
+
+      {/* Upward Floating Reward Badges */}
+      <FloatingReward rewards={floatingRewards} />
+
       {/* Toast notifications */}
       <div className="fixed bottom-6 right-6 z-[60] flex flex-col gap-2 pointer-events-none">
         {toasts.map((toast) => (
@@ -363,15 +410,18 @@ const QuestBoardPage: React.FC = () => {
             key={toast.id}
             role="status"
             aria-live="polite"
-            className={`pointer-events-auto px-4 py-3 rounded-rpg shadow-lg border text-sm font-medium animate-fade-in ${
+            className={`pointer-events-auto px-4 py-3 rounded-lg shadow-lg border text-sm font-medium flex items-center gap-2 backdrop-blur-md animate-fade-in ${
               toast.type === 'success'
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40 shadow-emerald-950/40'
                 : toast.type === 'info'
-                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                  : 'bg-red-500/15 text-red-400 border-red-500/30'
+                  ? 'bg-amber-950/90 text-amber-300 border-amber-500/40 shadow-amber-950/40'
+                  : 'bg-red-950/90 text-red-300 border-red-500/40 shadow-red-950/40'
             }`}
           >
-            {toast.type === 'success' ? '✅' : toast.type === 'info' ? 'ℹ️' : '❌'} {toast.message}
+            <span aria-hidden="true">
+              {toast.type === 'success' ? '✅' : toast.type === 'info' ? 'ℹ️' : '❌'}
+            </span>
+            <span>{toast.message}</span>
           </div>
         ))}
       </div>
