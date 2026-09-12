@@ -343,3 +343,68 @@ export interface RpgStats extends RpgProfile {
   totalQuests: number;
 }
 
+// ============================================================
+// --- Phase 6: Main RPG Dashboard Types ---
+// ============================================================
+
+export interface DashboardPlayer {
+  name: string;
+  email: string;
+  level: number;
+  totalXp: number;
+  currentXp: number;
+  xpForNextLevel: number;
+  xpProgressPercentage: number;
+  goldBalance: number;
+}
+
+export interface DashboardQuestsSummary {
+  total: number;
+  todo: number;
+  inProgress: number;
+  active: number;
+  completed: number;
+  completionPercentage: number;
+}
+
+export interface DashboardQuestItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  priority: QuestPriority;
+  status: QuestStatusType;
+  dueDate?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  xpReward: number;
+  goldReward: number;
+}
+
+export interface DashboardActivityItem {
+  id: string;
+  type: 'QUEST_COMPLETED' | 'XP_EARNED' | 'GOLD_EARNED';
+  title: string;
+  amount?: number;
+  balanceAfter?: number;
+  timestamp: string;
+  icon: string;
+}
+
+export interface DashboardData {
+  player: DashboardPlayer;
+  attributes: RpgAttributes;
+  quests: DashboardQuestsSummary;
+  activeQuests: DashboardQuestItem[];
+  recentlyCompletedQuests: DashboardQuestItem[];
+  recentXpHistory: XpHistoryEntry[];
+  recentGoldHistory: GoldHistoryItem[];
+  recentActivity: DashboardActivityItem[];
+}
+
+export interface DashboardResponse {
+  success: true;
+  message: string;
+  data: DashboardData;
+}
+
+
