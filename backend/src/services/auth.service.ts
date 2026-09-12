@@ -15,11 +15,13 @@ import type { SafeUser, SignupDto, LoginDto } from '../types/auth';
 export const signupSchema = z.object({
   username: z
     .string()
+    .trim()
     .min(3, 'Username must be at least 3 characters')
     .max(30, 'Username must be at most 30 characters')
     .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
   email: z
     .string()
+    .trim()
     .email('Invalid email address')
     .max(255, 'Email is too long'),
   password: z
@@ -31,7 +33,7 @@ export const signupSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().trim().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 });
 

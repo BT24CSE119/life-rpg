@@ -57,17 +57,32 @@ test('Phase 9 Production Hardening, Security, Real-Time SSE, and Performance Sui
     const port = (server.address() as { port: number }).port;
 
     try {
-      // 2a. Reject unauthorized connection without token
+      // 2a. Reject unauthorized connection without ticket or cookie
       const unauthRes = await fetch(`http://localhost:${port}/api/events`);
       assert.equal(unauthRes.status, 401, 'SSE route should reject unauthenticated requests');
 
-      // 2b. Connect with valid token in query param
+      // 2b. Reject insecure attempt to pass raw JWT token in query parameter
+      const rawTokenRes = await fetch(`http://localhost:${port}/api/events?token=${token}`);
+      assert.equal(rawTokenRes.status, 400, 'SSE route should strictly reject raw JWT query tokens');
+
+      // 2c. Request secure short-lived single-use ticket
+      const ticketRes = await fetch(`http://localhost:${port}/api/events/ticket`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      assert.equal(ticketRes.status, 200, 'Should successfully issue SSE ticket');
+      const ticketData = await ticketRes.json() as { success: boolean; ticket: string };
+      assert.ok(ticketData.ticket, 'Should return ticket string');
+
+      // 2d. Connect using the single-use ticket
       const controller = new AbortController();
-      const authRes = await fetch(`http://localhost:${port}/api/events?token=${token}`, {
+      const authRes = await fetch(`http://localhost:${port}/api/events?ticket=${ticketData.ticket}`, {
         signal: controller.signal,
       });
 
-      assert.equal(authRes.status, 200, 'SSE route should connect successfully with valid token');
+      assert.equal(authRes.status, 200, 'SSE route should connect successfully with valid ticket');
       assert.equal(
         authRes.headers.get('content-type'),
         'text/event-stream',

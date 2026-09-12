@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { useAuth } from '../hooks/useAuth';
 import { getWallet } from '../services/rpg';
 import { getUnreadNotificationCount } from '../services/notification';
+import api from '../services/api';
 import type { DashboardData } from '../types';
 
 interface EquippedItem {
@@ -96,11 +97,17 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     let eventSource: EventSource | null = null;
     let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    const connectSSE = () => {
+    const connectSSE = async () => {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const eventsUrl = `${apiUrl}/events`;
+      let eventsUrl = `${apiUrl}/events`;
 
       try {
+        // Obtain short-lived single-use SSE ticket (no raw JWT in URL)
+        const ticketRes = await api.post<{ success: boolean; ticket: string }>('/events/ticket').catch(() => null);
+        if (ticketRes?.data?.ticket) {
+          eventsUrl += `?ticket=${ticketRes.data.ticket}`;
+        }
+
         eventSource = new EventSource(eventsUrl, { withCredentials: true });
 
         eventSource.onopen = () => {
