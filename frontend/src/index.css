@@ -219,16 +219,32 @@
   box-shadow: 0 0 25px rgba(245, 200, 66, 0.25), inset 0 0 12px rgba(245, 200, 66, 0.1);
 }
 
-.preserve-3d {
-  transform-style: preserve-3d;
+/* ============================================================
+   CUSTOM PROFESSIONAL CALENDAR / DATETIME INPUT
+   ============================================================ */
+
+/* Color-scheme for native date pickers */
+input[type="date"],
+input[type="datetime-local"] {
+  color-scheme: dark;
 }
 
-.perspective-800 {
-  perspective: 800px;
+/* Custom styled calendar picker indicator */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.8) sepia(1) saturate(3) hue-rotate(5deg);
+  opacity: 0.85;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  padding: 4px;
+  border-radius: 4px;
 }
 
-.perspective-1000 {
-  perspective: 1000px;
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  background-color: rgba(245, 200, 66, 0.15);
 }
 
 

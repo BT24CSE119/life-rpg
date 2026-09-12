@@ -62,7 +62,7 @@ const ActiveQuestsSection: React.FC<ActiveQuestsSectionProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onOpenCreate}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-rpg text-xs font-semibold bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 active:scale-[0.98] transition-all shadow-rpg-gold/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-rpg-gold"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-rpg text-xs font-semibold bg-rpg-gradient-gold text-rpg-bg hover:brightness-105 active:scale-[0.98] transition-all shadow-sm border border-amber-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rpg-gold"
           >
             ➕ Forge Quest
           </button>
@@ -88,7 +88,7 @@ const ActiveQuestsSection: React.FC<ActiveQuestsSectionProps> = ({
           </p>
           <button
             onClick={onOpenCreate}
-            className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-rpg text-xs font-semibold bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 active:scale-[0.98] transition-all shadow-rpg-gold"
+            className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-rpg text-xs font-semibold bg-rpg-gradient-gold text-rpg-bg hover:brightness-105 active:scale-[0.98] transition-all shadow-sm border border-amber-500/40"
           >
             ➕ Forge Your First Quest
           </button>
@@ -105,7 +105,7 @@ const ActiveQuestsSection: React.FC<ActiveQuestsSectionProps> = ({
                 className="bg-rpg-surface-2/70 border border-rpg-border rounded-rpg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-rpg-gold/30 hover:bg-rpg-surface-2 transition-all duration-200 group animate-card-enter shadow-sm"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 pr-2">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span
                       className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${priority.bg} ${priority.text} ${priority.border}`}
@@ -124,11 +124,11 @@ const ActiveQuestsSection: React.FC<ActiveQuestsSectionProps> = ({
                       </span>
                     )}
                   </div>
-                  <h3 className="font-display font-bold text-rpg-text text-sm sm:text-base group-hover:text-gold-gradient transition-all">
+                  <h3 className="font-display font-bold text-rpg-text text-sm sm:text-base group-hover:text-gold-gradient transition-all break-words">
                     {quest.title}
                   </h3>
                   {quest.description && (
-                    <p className="text-xs text-rpg-text-muted line-clamp-1 mt-1">
+                    <p className="text-xs text-rpg-text-muted line-clamp-2 mt-1 break-words">
                       {quest.description}
                     </p>
                   )}
@@ -141,13 +141,16 @@ const ActiveQuestsSection: React.FC<ActiveQuestsSectionProps> = ({
                     className="inline-flex items-center gap-2 px-4 py-2 text-xs font-display font-bold rounded-rpg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 hover:border-emerald-500/60 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                   >
                     {isCompleting ? (
-                      <span className="animate-spin text-xs" aria-hidden="true">
-                        ⚙️
-                      </span>
+                      <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
                     ) : (
-                      <span aria-hidden="true">⚔️</span>
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     )}
-                    {isCompleting ? 'Finalizing…' : 'Complete Quest'}
+                    {isCompleting ? 'Claiming…' : 'Complete Quest'}
                   </button>
                 </div>
               </div>

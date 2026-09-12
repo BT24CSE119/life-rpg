@@ -50,6 +50,8 @@ export interface SafeUser {
   username: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string | null;
+  googleId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

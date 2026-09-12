@@ -13,14 +13,19 @@ const apiClient = axios.create({
   withCredentials: true, // Required for HttpOnly refresh cookie
 });
 
-// ── In-memory access token store ──────────────────────────────────────────────
-// Stored in module memory — NOT in localStorage or sessionStorage.
-// Cleared on page refresh (by design — refresh token cookie re-authenticates).
-
-let _accessToken: string | null = null;
+// ── In-memory & persisted access token store ───────────────────────────────────
+const STORAGE_KEY = 'life_rpg_access_token';
+let _accessToken: string | null = (typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null);
 
 export const setAccessToken = (token: string | null): void => {
   _accessToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem(STORAGE_KEY, token);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
 };
 
 export const getAccessToken = (): string | null => _accessToken;

@@ -21,11 +21,12 @@ interface RpgContextValue {
   currentStreak: number | null;
   equippedCosmetics: EquippedItem[];
   realtimeConnected: boolean;
-  setGoldBalance: (balance: number | null) => void;
+  setGoldBalance: React.Dispatch<React.SetStateAction<number | null>>;
   setUnreadCount: (count: number | ((prev: number) => number)) => void;
   syncFromDashboard: (data: DashboardData) => void;
   refreshWallet: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  refreshEquipped: () => Promise<void>;
 }
 
 const RpgContext = createContext<RpgContextValue | undefined>(undefined);
@@ -59,6 +60,28 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isAuthenticated]);
 
+  const refreshEquipped = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const inv = await api.get<{ success: boolean; data: any[] }>('/inventory');
+      if (inv.data?.data) {
+        const equippedList: EquippedItem[] = inv.data.data
+          .filter((item) => item.isEquipped)
+          .map((item) => ({
+            id: item.id,
+            itemId: item.itemId,
+            name: item.item?.name,
+            category: item.item?.category || item.item?.type,
+            iconEmoji: item.item?.iconEmoji,
+            rarity: item.item?.rarity,
+          }));
+        setEquippedCosmetics(equippedList);
+      }
+    } catch {
+      // Ignore
+    }
+  }, [isAuthenticated]);
+
   const syncFromDashboard = useCallback((data: DashboardData) => {
     if (data.player) {
       setGoldBalance(data.player.goldBalance);
@@ -67,7 +90,7 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (data.streak) {
       setCurrentStreak(data.streak.currentStreak);
     }
-    if (data.equipped) {
+    if (data.equipped && data.equipped.length > 0) {
       setEquippedCosmetics(data.equipped);
     }
     if (typeof data.unreadNotificationsCount === 'number') {
@@ -80,6 +103,7 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isAuthenticated) {
       refreshWallet();
       refreshNotifications();
+      refreshEquipped();
     } else {
       setGoldBalance(null);
       setUnreadCount(0);
@@ -88,7 +112,8 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setEquippedCosmetics([]);
       setRealtimeConnected(false);
     }
-  }, [isAuthenticated, refreshWallet, refreshNotifications]);
+  }, [isAuthenticated, refreshWallet, refreshNotifications, refreshEquipped]);
+
 
   // Real-Time Server-Sent Events (SSE) stream
   useEffect(() => {
@@ -248,6 +273,7 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         syncFromDashboard,
         refreshWallet,
         refreshNotifications,
+        refreshEquipped,
       }}
     >
       {children}

@@ -4,6 +4,7 @@ import PageContainer from './PageContainer';
 import RPGButton from '../components/RPGButton';
 import GoldBadge from '../components/GoldBadge';
 import NotificationCenter from '../components/NotificationCenter';
+import UserMenuDropdown from '../components/UserMenuDropdown';
 import { useAuth } from '../hooks/useAuth';
 import { useRpg } from '../context/RpgContext';
 
@@ -12,6 +13,71 @@ const NAV_LINKS = [
   { label: 'Features',     href: '#features'     },
   { label: 'Preview',      href: '#preview'      },
 ];
+
+// ── SVG Icon Components ───────────────────────────────────────────────────────
+
+const SwordIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+    <path d="M13 19l6-6" />
+    <path d="M2 2l6 6" />
+    <path d="M20 16l2-2" />
+    <path d="M16 20l2-2" />
+  </svg>
+);
+
+const HomeIcon: React.FC<{ className?: string }> = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 12L12 3l9 9" />
+    <path d="M9 21V12h6v9" />
+    <path d="M5 10v11h14V10" />
+  </svg>
+);
+
+const ScrollIcon: React.FC<{ className?: string }> = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+    <path d="M14 2v6h6" />
+    <line x1="9" y1="13" x2="15" y2="13" />
+    <line x1="9" y1="17" x2="15" y2="17" />
+  </svg>
+);
+
+const BagIcon: React.FC<{ className?: string }> = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <path d="M16 10a4 4 0 01-8 0" />
+  </svg>
+);
+
+const TrophyIcon: React.FC<{ className?: string }> = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 9H4.5a2.5 2.5 0 010-5H6" />
+    <path d="M18 9h1.5a2.5 2.5 0 000-5H18" />
+    <path d="M4 22h16" />
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+    <path d="M18 2H6v7a6 6 0 006 6 6 6 0 006-6V2z" />
+  </svg>
+);
+
+const ChartIcon: React.FC<{ className?: string }> = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+
+const CoinIcon: React.FC<{ className?: string }> = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 6v12M15 9.5a3.5 3.5 0 0 0-7 0c0 4 7 2 7 6a3.5 3.5 0 0 1-7 0" />
+  </svg>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -22,14 +88,12 @@ const Navbar: React.FC = () => {
   const { goldBalance, unreadCount, realtimeConnected, equippedCosmetics } = useRpg();
   const isLanding = location.pathname === '/';
 
-  // Detect scroll to add backdrop blur
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location]);
@@ -57,8 +121,8 @@ const Navbar: React.FC = () => {
             className="flex items-center gap-2 group relative py-1"
             aria-label="Life RPG — Home"
           >
-            <span className="text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6" aria-hidden="true">
-              ⚔️
+            <span className="text-rpg-gold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+              <SwordIcon className="w-6 h-6" />
             </span>
             <span className="font-display text-xl font-black text-gold-gradient tracking-wide group-hover:brightness-110 transition-all">
               Life RPG
@@ -88,7 +152,7 @@ const Navbar: React.FC = () => {
                   }`}
                   role="listitem"
                 >
-                  <span aria-hidden="true">🏰</span> Dashboard
+                  <HomeIcon /> Dashboard
                 </Link>
                 <Link
                   to="/quests"
@@ -99,18 +163,7 @@ const Navbar: React.FC = () => {
                   }`}
                   role="listitem"
                 >
-                  <span aria-hidden="true">📜</span> Quests
-                </Link>
-                <Link
-                  to="/shop"
-                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
-                    isActive('/shop')
-                      ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
-                      : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
-                  }`}
-                  role="listitem"
-                >
-                  <span aria-hidden="true">🪙</span> Shop
+                  <ScrollIcon /> Quests
                 </Link>
                 <Link
                   to="/inventory"
@@ -121,7 +174,22 @@ const Navbar: React.FC = () => {
                   }`}
                   role="listitem"
                 >
-                  <span aria-hidden="true">🎒</span> Inventory
+                  <BagIcon /> Inventory
+                </Link>
+                <Link
+                  to="/shop"
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                    isActive('/shop')
+                      ? 'text-amber-300 bg-amber-950/40 border border-amber-400/50 shadow-[0_0_15px_rgba(245,200,66,0.25)]'
+                      : 'text-amber-400/90 hover:text-amber-300 hover:bg-amber-950/20'
+                  }`}
+                  role="listitem"
+                >
+                  <CoinIcon className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Guild Bazaar</span>
+                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                    SHOP
+                  </span>
                 </Link>
                 <Link
                   to="/achievements"
@@ -132,7 +200,23 @@ const Navbar: React.FC = () => {
                   }`}
                   role="listitem"
                 >
-                  <span aria-hidden="true">🏆</span> Trophies
+                  <TrophyIcon /> Trophies
+                </Link>
+                <Link
+                  to="/leaderboard"
+                  className={`relative px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                    isActive('/leaderboard')
+                      ? 'text-amber-300 bg-amber-950/30 border border-amber-500/30 shadow-[0_0_12px_rgba(245,200,66,0.15)]'
+                      : 'text-rpg-text-muted hover:text-rpg-text hover:bg-rpg-surface/60'
+                  }`}
+                  role="listitem"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
+                    <path d="M18 8h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4" />
+                    <circle cx="8" cy="12" r="2" />
+                  </svg>
+                  Ranks
                 </Link>
                 <Link
                   to="/rpg"
@@ -143,7 +227,7 @@ const Navbar: React.FC = () => {
                   }`}
                   role="listitem"
                 >
-                  <span aria-hidden="true">✦</span> Progress
+                  <ChartIcon /> Progress
                 </Link>
               </>
             )}
@@ -153,40 +237,9 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-3">
             {!isLoading && isAuthenticated ? (
               <>
-                <NotificationCenter initialUnreadCount={unreadCount} />
 
-                {goldBalance !== null && (
-                  <Link
-                    to="/shop"
-                    title="View Guild Treasury & Bazaar"
-                    className="hover:scale-105 active:scale-95 transition-transform"
-                  >
-                    <GoldBadge amount={goldBalance} size="sm" />
-                  </Link>
-                )}
-                {realtimeConnected && (
-                  <span
-                    className="hidden xl:inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-full"
-                    title="Real-time Server Sync Active"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
-                    LIVE
-                  </span>
-                )}
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rpg-surface-2 border border-rpg-border text-rpg-text flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
-                  {equippedCosmetics.find((c) => c.category === 'AVATAR_FRAME')?.iconEmoji && (
-                    <span aria-hidden="true">{equippedCosmetics.find((c) => c.category === 'AVATAR_FRAME')?.iconEmoji}</span>
-                  )}
-                  {user?.username}
-                </span>
-                <RPGButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => { await logout(); navigate('/'); }}
-                >
-                  Logout
-                </RPGButton>
+                <NotificationCenter initialUnreadCount={unreadCount} />
+                <UserMenuDropdown />
               </>
             ) : !isLoading ? (
               <>
@@ -204,9 +257,14 @@ const Navbar: React.FC = () => {
             ) : null}
           </div>
 
-          {/* Mobile hamburger */}
+          {/* Mobile controls */}
           <div className="flex items-center gap-2 md:hidden">
-            {isAuthenticated && <NotificationCenter initialUnreadCount={unreadCount} />}
+            {isAuthenticated && (
+              <>
+                <NotificationCenter initialUnreadCount={unreadCount} />
+                <UserMenuDropdown />
+              </>
+            )}
 
             <button
               className="flex flex-col gap-1.5 p-2 rounded-lg hover:bg-rpg-surface-2 border border-rpg-border/40 transition-colors"
@@ -262,7 +320,7 @@ const Navbar: React.FC = () => {
                       isActive('/dashboard') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
-                    <span>🏰</span> Dashboard
+                    <HomeIcon /> Dashboard
                   </Link>
                   <Link
                     to="/quests"
@@ -271,19 +329,7 @@ const Navbar: React.FC = () => {
                       isActive('/quests') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
-                    <span>📜</span> Quests
-                  </Link>
-                  <Link
-                    to="/shop"
-                    onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-between ${
-                      isActive('/shop') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span>🪙</span> Guild Shop
-                    </span>
-                    {goldBalance !== null && <GoldBadge amount={goldBalance} size="sm" />}
+                    <ScrollIcon /> Quests
                   </Link>
                   <Link
                     to="/inventory"
@@ -292,7 +338,22 @@ const Navbar: React.FC = () => {
                       isActive('/inventory') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
-                    <span>🎒</span> Inventory
+                    <BagIcon /> Inventory
+                  </Link>
+                  <Link
+                    to="/shop"
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-between ${
+                      isActive('/shop') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-amber-400 hover:text-amber-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CoinIcon className="w-4 h-4 text-amber-400" />
+                      <span>Guild Bazaar</span>
+                    </div>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                      SHOP
+                    </span>
                   </Link>
                   <Link
                     to="/achievements"
@@ -301,7 +362,21 @@ const Navbar: React.FC = () => {
                       isActive('/achievements') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
-                    <span>🏆</span> Trophies & Achievements
+                    <TrophyIcon /> Trophies & Achievements
+                  </Link>
+                  <Link
+                    to="/leaderboard"
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                      isActive('/leaderboard') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
+                      <path d="M18 8h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4" />
+                      <circle cx="8" cy="12" r="2" />
+                    </svg>
+                    Hall of Champions (Leaderboard)
                   </Link>
                   <Link
                     to="/rpg"
@@ -310,7 +385,7 @@ const Navbar: React.FC = () => {
                       isActive('/rpg') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
                     }`}
                   >
-                    <span>✦</span> Character Progression
+                    <ChartIcon /> Character Progression
                   </Link>
                 </>
               )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PageContainer from '../layouts/PageContainer';
 import { getUserInventory, equipItem, unequipItem } from '../services/inventory';
+import { useRpg } from '../context/RpgContext';
 import type { InventoryItem } from '../types';
 
 const RARITY_STYLES: Record<string, { badge: string; border: string }> = {
@@ -13,6 +14,7 @@ const RARITY_STYLES: Record<string, { badge: string; border: string }> = {
 };
 
 const InventoryPage: React.FC = () => {
+  const { refreshEquipped } = useRpg();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -59,6 +61,7 @@ const InventoryPage: React.FC = () => {
       await equipItem(itemId);
       setToast(`⚔️ Equipped ${name}`);
       await loadInventory();
+      await refreshEquipped();
     } catch (err: unknown) {
       // Safe rollback
       setItems(prevItems);
@@ -82,6 +85,7 @@ const InventoryPage: React.FC = () => {
       await unequipItem(itemId);
       setToast(`Unequipped ${name}`);
       await loadInventory();
+      await refreshEquipped();
     } catch (err: unknown) {
       // Safe rollback
       setItems(prevItems);
@@ -120,9 +124,10 @@ const InventoryPage: React.FC = () => {
             </span>
             <Link
               to="/shop"
-              className="px-4 py-2 rounded-lg text-xs font-bold bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 shadow-rpg-gold transition-all"
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 hover:border-amber-400 transition-all flex items-center gap-1.5 active:scale-95"
             >
-              🏪 Visit Shop
+              <span>🏪</span>
+              <span>Visit Shop</span>
             </Link>
           </div>
         </div>
@@ -145,7 +150,7 @@ const InventoryPage: React.FC = () => {
             </p>
             <Link
               to="/shop"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 shadow-rpg-gold transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500/50 shadow-sm transition-all"
             >
               🪙 Browse Guild Shop
             </Link>
@@ -172,9 +177,19 @@ const InventoryPage: React.FC = () => {
 
                   <div>
                     <div className="flex items-center gap-3 mb-3">
-                      <span className="text-3xl" aria-hidden="true">
-                        {item.iconEmoji || '📦'}
-                      </span>
+                      {item.imageUrl ? (
+                        <div className="relative w-14 h-14 rounded-xl overflow-hidden border-2 border-amber-400/50 shadow-md bg-black/40 shrink-0">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-full h-full object-cover object-center"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-3xl" aria-hidden="true">
+                          {item.iconEmoji || '📦'}
+                        </span>
+                      )}
                       <div>
                         <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${rarityStyle.badge}`}>
                           {item.rarity}
@@ -207,7 +222,7 @@ const InventoryPage: React.FC = () => {
                       <button
                         onClick={() => handleEquip(inv.itemId, item.name)}
                         disabled={isActioning}
-                        className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 shadow-rpg-gold transition-all active:scale-95"
+                        className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500/50 shadow-sm transition-all active:scale-95 disabled:opacity-50"
                       >
                         {isActioning ? 'Equipping…' : 'Equip'}
                       </button>

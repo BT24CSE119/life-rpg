@@ -13,7 +13,7 @@ const RpgProgressCard: React.FC<Props> = ({ profile, compact = false }) => {
 
   return (
     <section
-      className={`rpg-hud-panel border border-rpg-border rounded-rpg-lg relative overflow-hidden transition-all duration-300 hover:border-rpg-gold/40 ${
+      className={`rpg-hud-panel border border-rpg-border rounded-rpg-lg relative overflow-hidden transition-all duration-300 hover:border-rpg-gold/40 h-full flex flex-col justify-between ${
         compact ? 'p-4' : 'p-6'
       }`}
       aria-label="Player progression"

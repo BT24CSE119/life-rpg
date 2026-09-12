@@ -162,6 +162,8 @@ export interface User {
   username: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string | null;
+  googleId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -217,6 +219,7 @@ export interface Quest {
   id: string;
   title: string;
   description: string | null;
+  category?: string | null;
   priority: QuestPriority;
   status: QuestStatusType;
   dueDate: string | null;
@@ -229,6 +232,7 @@ export interface Quest {
 export interface CreateQuestInput {
   title: string;
   description?: string;
+  category?: string | null;
   priority?: QuestPriority;
   dueDate?: string | null;
 }
@@ -236,6 +240,7 @@ export interface CreateQuestInput {
 export interface UpdateQuestInput {
   title?: string;
   description?: string | null;
+  category?: string | null;
   priority?: QuestPriority;
   status?: QuestStatusType;
   dueDate?: string | null;
@@ -262,6 +267,7 @@ export interface ProgressionResult {
   progressPercent: number;
   goldBalance: number;
   levelUp: boolean;
+  attributes?: RpgAttributes;
 }
 
 export interface RpgProfile {
@@ -278,6 +284,10 @@ export interface RpgProfile {
 export interface RewardResult {
   xpAwarded: number;
   goldAwarded: number;
+  attributeGained?: {
+    attribute: keyof RpgAttributes;
+    amount: number;
+  };
   reason: 'QUEST_COMPLETION';
 }
 
@@ -341,6 +351,26 @@ export interface GoldWalletResult {
 export interface RpgStats extends RpgProfile {
   completedQuests: number;
   totalQuests: number;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  level: number;
+  totalXp: number;
+  currentLevelXp: number;
+  nextLevelXp: number;
+  currentStreak: number;
+  longestStreak: number;
+  goldBalance: number;
+  equipped: {
+    title: string;
+    badge?: string;
+    frame?: string;
+  };
+  attributes: RpgAttributes;
 }
 
 // ============================================================
@@ -519,6 +549,7 @@ export interface ShopItem {
   category: string | null;
   goldCost: number;
   iconEmoji: string | null;
+  imageUrl?: string | null;
   isActive: boolean;
   ownedQuantity: number;
   isEquipped: boolean;
@@ -552,6 +583,7 @@ export interface InventoryItem {
     category: string | null;
     goldCost: number;
     iconEmoji: string | null;
+    imageUrl?: string | null;
   };
 }
 

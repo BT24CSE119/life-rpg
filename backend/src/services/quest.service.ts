@@ -21,6 +21,12 @@ export const createQuestSchema = z.object({
     .trim()
     .max(1000, 'Description must be at most 1000 characters')
     .optional(),
+  category: z
+    .string()
+    .trim()
+    .max(50, 'Category must be at most 50 characters')
+    .optional()
+    .nullable(),
   priority: z
     .nativeEnum(QuestPriority)
     .default(QuestPriority.MEDIUM),
@@ -44,6 +50,12 @@ export const updateQuestSchema = z
       .string()
       .trim()
       .max(1000, 'Description must be at most 1000 characters')
+      .optional()
+      .nullable(),
+    category: z
+      .string()
+      .trim()
+      .max(50, 'Category must be at most 50 characters')
       .optional()
       .nullable(),
     priority: z.nativeEnum(QuestPriority).optional(),
@@ -75,6 +87,7 @@ const QUEST_SELECT = {
   id: true,
   title: true,
   description: true,
+  category: true,
   priority: true,
   status: true,
   dueDate: true,
@@ -157,6 +170,7 @@ export const createQuest = async (
       userId,                                   // Always from JWT — never client
       title: data.title,
       description: data.description ?? null,
+      category: data.category ?? 'STRENGTH',
       priority: data.priority,
       status: QuestStatus.TODO,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
@@ -195,6 +209,7 @@ export const updateQuest = async (
     data: {
       ...(data.title !== undefined ? { title: data.title } : {}),
       ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.category !== undefined ? { category: data.category } : {}),
       ...(data.priority !== undefined ? { priority: data.priority } : {}),
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.dueDate !== undefined
@@ -254,7 +269,7 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
   const runCompletion = () => prisma.$transaction(async (tx) => {
     const existing = await tx.quest.findFirst({
       where: { id: questId, userId },
-      select: { priority: true },
+      select: { priority: true, category: true },
     });
     if (!existing) throw notFoundError();
 
@@ -280,6 +295,13 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
           ...progress,
           goldBalance: profile.goldBalance,
           levelUp: false,
+          attributes: {
+            strength: profile.strength,
+            intelligence: profile.intelligence,
+            discipline: profile.discipline,
+            stamina: profile.stamina,
+            consistency: profile.consistency,
+          },
         },
         rpg: {
           level: profile.level,
@@ -312,6 +334,31 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
       },
     });
 
+    // Map quest category to character attribute stat
+    const categoryKey = (existing.category || 'STRENGTH').toUpperCase();
+    const attributeMapping: Record<string, keyof typeof DEFAULT_PROFILE & ('strength' | 'intelligence' | 'discipline' | 'stamina' | 'consistency')> = {
+      STRENGTH: 'strength',
+      FITNESS: 'strength',
+      GYM: 'strength',
+      INTELLIGENCE: 'intelligence',
+      INTELLECT: 'intelligence',
+      CODING: 'intelligence',
+      STUDY: 'intelligence',
+      READING: 'intelligence',
+      DISCIPLINE: 'discipline',
+      MEDITATION: 'discipline',
+      FOCUS: 'discipline',
+      STAMINA: 'stamina',
+      CARDIO: 'stamina',
+      HEALTH: 'stamina',
+      CONSISTENCY: 'consistency',
+      HABIT: 'consistency',
+      CHORE: 'consistency',
+    };
+
+    const targetAttribute = attributeMapping[categoryKey] || 'strength';
+    const attributeBonus = existing.priority === QuestPriority.HIGH ? 2 : 1;
+
     const totalXp = profile.totalXp + xpAwarded;
     const calculated = getLevelProgress(totalXp);
     const updatedProfile = await tx.playerProfile.update({
@@ -320,6 +367,7 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
         totalXp,
         level: calculated.level,
         goldBalance: newGoldBalance,
+        [targetAttribute]: { increment: attributeBonus },
       },
       select: PROFILE_SELECT,
     });
@@ -329,19 +377,29 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
 
     const quest = await tx.quest.findUniqueOrThrow({ where: { id: questId }, select: QUEST_SELECT });
 
-    // Send quest completed notification
+    const attrCapitalized = targetAttribute.charAt(0).toUpperCase() + targetAttribute.slice(1);
+
+    // Send quest completed notification with attribute progress
     await createNotification(
       userId,
       NotificationType.QUEST_COMPLETED,
       `⚔️ Quest Fulfilled: ${quest.title}`,
-      `You completed ${quest.title}! (+${xpAwarded} XP, +${goldAwarded} Gold)`,
-      { questId: quest.id, xpAwarded, goldAwarded },
+      `You completed ${quest.title}! (+${xpAwarded} XP, +${goldAwarded} Gold, +${attributeBonus} ${attrCapitalized})`,
+      { questId: quest.id, xpAwarded, goldAwarded, attributeGained: targetAttribute, attributeBonus },
       tx
     );
 
     return {
       quest,
-      reward: { xpAwarded, goldAwarded, reason: XpReason.QUEST_COMPLETION },
+      reward: {
+        xpAwarded,
+        goldAwarded,
+        attributeGained: {
+          attribute: targetAttribute,
+          amount: attributeBonus,
+        },
+        reason: XpReason.QUEST_COMPLETION,
+      },
       rewards: { xp: xpAwarded, gold: goldAwarded },
       progression: {
         previousLevel: profile.level,
@@ -349,6 +407,13 @@ export const completeQuestWithXp = async (questId: string, userId: string) => {
         ...calculated,
         goldBalance: updatedProfile.goldBalance,
         levelUp: updatedProfile.level > profile.level,
+        attributes: {
+          strength: updatedProfile.strength,
+          intelligence: updatedProfile.intelligence,
+          discipline: updatedProfile.discipline,
+          stamina: updatedProfile.stamina,
+          consistency: updatedProfile.consistency,
+        },
       },
       rpg: {
         level: updatedProfile.level,

@@ -138,5 +138,62 @@ export const getStats = async (userId: string) => {
   return { ...profile, completedQuests, totalQuests };
 };
 
+export const getLeaderboard = async (sortBy: 'level' | 'streak' = 'level', limit = 20) => {
+  const orderBy = sortBy === 'streak'
+    ? [{ currentStreak: 'desc' as const }, { totalXp: 'desc' as const }]
+    : [{ level: 'desc' as const }, { totalXp: 'desc' as const }];
+
+  const topProfiles = await prisma.playerProfile.findMany({
+    orderBy,
+    take: limit,
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true,
+          inventory: {
+            where: { isEquipped: true },
+            include: { item: true },
+          },
+        },
+      },
+    },
+  });
+
+  return topProfiles.map((p, idx) => {
+    const progress = getLevelProgress(p.totalXp);
+    const equippedTitle = p.user.inventory.find((inv) => inv.item.category === 'TITLE')?.item.name;
+    const equippedBadge = p.user.inventory.find((inv) => inv.item.category === 'BADGE')?.item.name;
+    const equippedFrame = p.user.inventory.find((inv) => inv.item.category === 'AVATAR_FRAME')?.item.name;
+
+    return {
+      rank: idx + 1,
+      userId: p.userId,
+      username: p.user.username,
+      avatarUrl: p.user.avatarUrl,
+      level: p.level,
+      totalXp: p.totalXp,
+      currentLevelXp: progress.currentLevelXp,
+      nextLevelXp: progress.nextLevelXp,
+      currentStreak: p.currentStreak,
+      longestStreak: p.longestStreak,
+      goldBalance: p.goldBalance,
+      equipped: {
+        title: equippedTitle || 'Novice Adventurer',
+        badge: equippedBadge,
+        frame: equippedFrame,
+      },
+      attributes: {
+        strength: p.strength,
+        intelligence: p.intelligence,
+        discipline: p.discipline,
+        stamina: p.stamina,
+        consistency: p.consistency,
+      },
+    };
+  });
+};
+
 export type RpgTransactionClient = Prisma.TransactionClient;
 export { DEFAULT_PROFILE, PROFILE_SELECT, XpReason };

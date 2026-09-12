@@ -20,7 +20,7 @@ const StreakCard: React.FC<StreakCardProps> = ({ streak }) => {
   };
 
   return (
-    <div className="bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-5 shadow-sm hover:border-amber-500/30 transition-all">
+    <div className="bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-5 shadow-sm hover:border-amber-500/30 transition-all h-full flex flex-col justify-between">
       {/* Top row */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">

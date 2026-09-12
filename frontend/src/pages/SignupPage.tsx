@@ -1,6 +1,7 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signup } from '../services/auth';
+import { signup, checkUsername } from '../services/auth';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import type { ValidationError } from '../types';
 
 interface FormState {
@@ -22,6 +23,8 @@ const PASSWORD_RULES = [
   { test: (p: string) => /[0-9]/.test(p), label: 'One number' },
 ];
 
+const STRICT_EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
   const baseId = useId();
@@ -32,10 +35,63 @@ const SignupPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Real-time username availability & suggestions state
+  const [usernameChecking, setUsernameChecking] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const checkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced check whenever username changes
+  useEffect(() => {
+    const trimmed = form.username.trim();
+    if (checkTimeoutRef.current) {
+      clearTimeout(checkTimeoutRef.current);
+    }
+
+    if (trimmed.length < 3) {
+      setUsernameAvailable(null);
+      setUsernameSuggestions([]);
+      setUsernameChecking(false);
+      return;
+    }
+
+    setUsernameChecking(true);
+    checkTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await checkUsername(trimmed);
+        setUsernameChecking(false);
+        setUsernameAvailable(res.available);
+        if (!res.available && res.suggestions) {
+          setUsernameSuggestions(res.suggestions);
+          setErrors((prev) => ({
+            ...prev,
+            username: 'This username is already taken. Try one below:',
+          }));
+        } else {
+          setUsernameSuggestions([]);
+          setErrors((prev) => ({ ...prev, username: undefined }));
+        }
+      } catch {
+        setUsernameChecking(false);
+      }
+    }, 450);
+
+    return () => {
+      if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+    };
+  }, [form.username]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
+  };
+
+  const handleSelectSuggestion = (suggested: string) => {
+    setForm((prev) => ({ ...prev, username: suggested }));
+    setUsernameSuggestions([]);
+    setUsernameAvailable(true);
+    setErrors((prev) => ({ ...prev, username: undefined }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,9 +99,42 @@ const SignupPage: React.FC = () => {
     setErrors({});
 
     const newErrors: FieldErrors = {};
-    if (!form.username.trim()) newErrors.username = 'Username is required';
-    if (!form.email.trim()) newErrors.email = 'Email is required';
-    if (!form.password) newErrors.password = 'Password is required';
+    const trimmedUsername = form.username.trim();
+    const trimmedEmail = form.email.trim();
+
+    if (!trimmedUsername) {
+      newErrors.username = 'Username is required';
+    } else if (trimmedUsername.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
+      newErrors.username = 'Username can only contain letters, numbers, and underscores';
+    } else if (usernameAvailable === false) {
+      newErrors.username = 'Please choose an available username';
+    }
+
+    if (!trimmedEmail) {
+      newErrors.email = 'Email address is required';
+    } else if (!STRICT_EMAIL_REGEX.test(trimmedEmail) || !trimmedEmail.includes('.')) {
+      newErrors.email = 'Please enter a valid email address (e.g. name@gmail.com)';
+    } else {
+      const parts = trimmedEmail.split('@');
+      const domain = parts[1]?.toLowerCase() || '';
+      const domainParts = domain.split('.');
+      if (domainParts.length < 2 || domainParts[domainParts.length - 1].length < 2) {
+        newErrors.email = 'Invalid email domain (e.g. gmail.com)';
+      }
+    }
+
+    if (!form.password) {
+      newErrors.password = 'Password is required';
+    } else if (form.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/[A-Z]/.test(form.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter';
+    } else if (!/[0-9]/.test(form.password)) {
+      newErrors.password = 'Password must contain at least one number';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -54,25 +143,38 @@ const SignupPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await signup({
-        username: form.username.trim(),
-        email: form.email.trim(),
+        username: trimmedUsername,
+        email: trimmedEmail,
         password: form.password,
       });
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate('/login'), 1200);
     } catch (err) {
       const error = err as Error & {
-        response?: { data?: { error?: { message?: string; details?: ValidationError[] } } };
+        response?: {
+          data?: {
+            error?: {
+              message?: string;
+              field?: string;
+              suggestions?: string[];
+              details?: ValidationError[];
+            };
+          };
+        };
       };
       const apiError = error.response?.data?.error;
-      if (apiError?.details) {
+      if (apiError?.suggestions && apiError.suggestions.length > 0) {
+        setUsernameSuggestions(apiError.suggestions);
+        setUsernameAvailable(false);
+        setErrors({ username: 'This username is taken. Try one of these available names:' });
+      } else if (apiError?.details) {
         const fieldErrors: FieldErrors = {};
         apiError.details.forEach((d: ValidationError) => {
           (fieldErrors as Record<string, string>)[d.field] = d.message;
         });
         setErrors(fieldErrors);
       } else {
-        setErrors({ general: error.message ?? 'Signup failed. Please try again.' });
+        setErrors({ general: apiError?.message ?? error.message ?? 'Signup failed. Please try again.' });
       }
     } finally {
       setIsSubmitting(false);
@@ -92,7 +194,9 @@ const SignupPage: React.FC = () => {
 
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-3" aria-hidden="true">🛡️</div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/50 border border-amber-500/40 text-amber-300 text-xs font-bold font-display uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(245,200,66,0.2)]">
+              <span>⚔️</span> Life RPG
+            </div>
             <h1 className="font-display text-3xl font-bold text-rpg-text mb-1">
               Create Your Character
             </h1>
@@ -127,33 +231,80 @@ const SignupPage: React.FC = () => {
           <form onSubmit={handleSubmit} noValidate aria-label="Signup form">
             {/* Username */}
             <div className="mb-4">
-              <label
-                htmlFor={`${baseId}-username`}
-                className="block text-sm font-medium text-rpg-text-muted mb-1.5"
-              >
-                Username
-              </label>
-              <input
-                id={`${baseId}-username`}
-                type="text"
-                name="username"
-                autoComplete="username"
-                value={form.username}
-                onChange={handleChange}
-                disabled={isSubmitting || success}
-                placeholder="DragonSlayer99"
-                aria-describedby={errors.username ? `${baseId}-username-err` : undefined}
-                aria-invalid={!!errors.username}
-                className={`w-full px-4 py-3 rounded-xl bg-rpg-bg border text-rpg-text placeholder:text-rpg-text-muted/40 text-sm outline-none transition-all focus:ring-2 focus:ring-rpg-gold/40 disabled:opacity-50 ${
-                  errors.username
-                    ? 'border-red-500/60 focus:border-red-500/60'
-                    : 'border-rpg-border focus:border-rpg-gold/60'
-                }`}
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor={`${baseId}-username`}
+                  className="block text-sm font-medium text-rpg-text-muted"
+                >
+                  Username
+                </label>
+                {usernameChecking && (
+                  <span className="text-xs text-rpg-gold flex items-center gap-1 animate-pulse">
+                    <span>⚙️</span> Checking availability...
+                  </span>
+                )}
+                {!usernameChecking && usernameAvailable === true && form.username.trim().length >= 3 && (
+                  <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium">
+                    <span>✓</span> Username available!
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  id={`${baseId}-username`}
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  disabled={isSubmitting || success}
+                  placeholder="DragonSlayer99"
+                  aria-describedby={errors.username ? `${baseId}-username-err` : undefined}
+                  aria-invalid={!!errors.username || usernameAvailable === false}
+                  className={`w-full px-4 py-3 pr-10 rounded-xl bg-rpg-bg border text-rpg-text placeholder:text-rpg-text-muted/40 text-sm outline-none transition-all focus:ring-2 focus:ring-rpg-gold/40 disabled:opacity-50 ${
+                    errors.username || usernameAvailable === false
+                      ? 'border-red-500/60 focus:border-red-500/60'
+                      : usernameAvailable === true && form.username.trim().length >= 3
+                      ? 'border-emerald-500/60 focus:border-emerald-500/60'
+                      : 'border-rpg-border focus:border-rpg-gold/60'
+                  }`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-sm">
+                  {usernameChecking && <span className="animate-spin inline-block">⏳</span>}
+                  {!usernameChecking && usernameAvailable === true && form.username.trim().length >= 3 && (
+                    <span className="text-emerald-400">✓</span>
+                  )}
+                  {!usernameChecking && usernameAvailable === false && (
+                    <span className="text-red-400">✗</span>
+                  )}
+                </div>
+              </div>
+
               {errors.username && (
                 <p id={`${baseId}-username-err`} role="alert" className="mt-1.5 text-xs text-red-400">
                   {errors.username}
                 </p>
+              )}
+
+              {/* Suggestions chips if username is taken */}
+              {usernameSuggestions.length > 0 && (
+                <div className="mt-2.5 p-3 rounded-xl bg-rpg-bg/90 border border-amber-500/30">
+                  <p className="text-xs text-amber-300/90 font-medium mb-1.5 flex items-center gap-1.5">
+                    <span>💡</span> Click an available username to claim it:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {usernameSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => handleSelectSuggestion(suggestion)}
+                        className="px-2.5 py-1 text-xs font-mono font-medium rounded-lg bg-rpg-surface border border-rpg-gold/40 hover:border-rpg-gold hover:bg-rpg-gold/20 text-rpg-gold transition-all cursor-pointer active:scale-95 shadow-sm"
+                      >
+                        +{suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -272,8 +423,16 @@ const SignupPage: React.FC = () => {
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-rpg-border" />
-            <span className="text-rpg-text-muted/40 text-xs">OR</span>
+            <span className="text-rpg-text-muted/40 text-xs uppercase tracking-wider font-semibold">Or continue with</span>
             <div className="flex-1 h-px bg-rpg-border" />
+          </div>
+
+          {/* Google Sign-In */}
+          <div className="mb-6">
+            <GoogleSignInButton
+              mode="signup"
+              onError={(msg) => setErrors((prev) => ({ ...prev, general: msg }))}
+            />
           </div>
 
           {/* Footer link */}

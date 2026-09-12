@@ -1,6 +1,7 @@
 import React, { useState, useId } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import type { ValidationError } from '../types';
 
 interface FormState {
@@ -61,7 +62,7 @@ const LoginPage: React.FC = () => {
         });
         setErrors(fieldErrors);
       } else {
-        setErrors({ general: error.message ?? 'Login failed. Please try again.' });
+        setErrors({ general: apiError?.message ?? error.message ?? 'Login failed. Please check your credentials.' });
       }
     } finally {
       setIsSubmitting(false);
@@ -82,7 +83,9 @@ const LoginPage: React.FC = () => {
 
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-3" aria-hidden="true">⚔️</div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/50 border border-amber-500/40 text-amber-300 text-xs font-bold font-display uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(245,200,66,0.2)]">
+              <span>⚔️</span> Life RPG
+            </div>
             <h1 className="font-display text-3xl font-bold text-rpg-text mb-1">
               Welcome Back
             </h1>
@@ -198,8 +201,16 @@ const LoginPage: React.FC = () => {
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-rpg-border" />
-            <span className="text-rpg-text-muted/40 text-xs">OR</span>
+            <span className="text-rpg-text-muted/40 text-xs uppercase tracking-wider font-semibold">Or continue with</span>
             <div className="flex-1 h-px bg-rpg-border" />
+          </div>
+
+          {/* Google Sign-In */}
+          <div className="mb-6">
+            <GoogleSignInButton
+              mode="login"
+              onError={(msg) => setErrors((prev) => ({ ...prev, general: msg }))}
+            />
           </div>
 
           {/* Footer link */}

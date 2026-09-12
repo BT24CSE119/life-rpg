@@ -110,12 +110,17 @@ const DailyMissionsSection: React.FC<DailyMissionsSectionProps> = ({
                       <button
                         onClick={() => onComplete(mission)}
                         disabled={isCompleting}
-                        className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:shadow-rpg-glow transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:shadow-rpg-glow transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isCompleting ? (
-                          <span className="animate-spin inline-block mr-1">⏳</span>
+                          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                          </svg>
                         ) : (
-                          <span aria-hidden="true">✓</span>
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
                         )}
                         {isCompleting ? 'Claiming…' : 'Complete'}
                       </button>

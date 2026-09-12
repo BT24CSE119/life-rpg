@@ -73,7 +73,7 @@ const AttributesCard: React.FC<AttributesCardProps> = ({ attributes }) => {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-5 gap-2.5">
         {keys.map((key) => {
           const item = ATTRIBUTE_CONFIG[key];
           const val = attributes[key] ?? 1;
@@ -81,24 +81,25 @@ const AttributesCard: React.FC<AttributesCardProps> = ({ attributes }) => {
           return (
             <div
               key={key}
-              className="bg-rpg-surface-2/60 border border-rpg-border rounded-rpg p-3.5 flex flex-col justify-between hover:border-rpg-border-2 transition-all group"
+              title={`${item.label}: ${item.description} (Level ${val})`}
+              className="bg-rpg-surface-2/60 border border-rpg-border rounded-rpg p-2.5 flex flex-col justify-between hover:border-rpg-border-2 transition-all group min-w-0 overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1.5 min-w-0">
                 <span
-                  className={`w-7 h-7 rounded-rpg flex items-center justify-center text-sm border ${item.bg} ${item.border}`}
+                  className={`w-6 h-6 rounded-rpg flex items-center justify-center text-xs border shrink-0 ${item.bg} ${item.border}`}
                   aria-hidden="true"
                 >
                   {item.icon}
                 </span>
-                <span className={`font-display text-xl font-black font-mono ${item.color}`}>
+                <span className={`font-display text-lg font-black font-mono shrink-0 ml-1 ${item.color}`}>
                   {val}
                 </span>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-rpg-text group-hover:text-rpg-gold transition-colors">
+              <div className="min-w-0 w-full overflow-hidden">
+                <p className="text-xs font-semibold text-rpg-text group-hover:text-rpg-gold transition-colors truncate">
                   {item.label}
                 </p>
-                <p className="text-[10px] text-rpg-text-muted mt-0.5 line-clamp-1">
+                <p className="text-[10px] text-rpg-text-muted mt-0.5 truncate leading-tight" title={item.description}>
                   {item.description}
                 </p>
               </div>

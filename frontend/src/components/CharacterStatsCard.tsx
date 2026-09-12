@@ -7,7 +7,6 @@ import GoldBadge from './GoldBadge';
 
 interface CharacterStatsCardProps {
   character: PreviewCharacter;
-  isPreview?: boolean;
   className?: string;
 }
 
@@ -22,20 +21,12 @@ const STAT_CONFIG = [
 
 const CharacterStatsCard: React.FC<CharacterStatsCardProps> = ({
   character,
-  isPreview = false,
   className = '',
 }) => {
   const hpPercent = Math.round((character.hp / character.maxHp) * 100);
 
   return (
     <RPGCard variant="gold" className={`overflow-visible ${className}`}>
-      {isPreview && (
-        <div className="flex items-center gap-2 mb-4 px-1">
-          <span className="text-xs uppercase tracking-widest text-rpg-gold/60 font-mono">
-            ⚠ Preview Data — Static UI Demo
-          </span>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">

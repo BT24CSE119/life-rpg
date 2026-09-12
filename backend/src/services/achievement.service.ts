@@ -115,7 +115,10 @@ export const INITIAL_ACHIEVEMENTS = [
   },
 ];
 
+let achievementsSeeded = false;
+
 export const ensureAchievementsSeeded = async () => {
+  if (achievementsSeeded) return;
   for (const ach of INITIAL_ACHIEVEMENTS) {
     await prisma.achievement.upsert({
       where: { code: ach.code },
@@ -131,6 +134,7 @@ export const ensureAchievementsSeeded = async () => {
       },
     });
   }
+  achievementsSeeded = true;
 };
 
 export const checkAndUnlockAchievements = async (

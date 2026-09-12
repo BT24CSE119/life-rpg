@@ -107,7 +107,7 @@ const LevelUpModal: React.FC<LevelUpModalProps> = ({
         <button
           ref={closeButtonRef}
           onClick={onClose}
-          className="w-full py-3 px-6 rounded-rpg font-display font-bold text-base bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 active:scale-[0.98] shadow-rpg-gold transition-all"
+          className="w-full py-3 px-6 rounded-rpg font-display font-bold text-base bg-rpg-gradient-gold text-rpg-bg hover:brightness-105 active:scale-[0.98] shadow-sm border border-amber-500/40 transition-all"
         >
           ⚔️ Continue Adventure
         </button>

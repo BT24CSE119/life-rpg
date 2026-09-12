@@ -16,25 +16,25 @@ interface RPGButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   gold: [
-    'bg-rpg-gradient-gold text-rpg-bg font-semibold',
-    'shadow-rpg-gold',
-    'hover:brightness-110 hover:shadow-[0_0_28px_rgba(245,200,66,0.45)]',
+    'bg-rpg-gradient-gold text-rpg-bg font-semibold border border-amber-500/40',
+    'shadow-sm',
+    'hover:brightness-105',
     'active:brightness-90 active:scale-[0.98]',
     'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100',
   ].join(' '),
 
   emerald: [
-    'bg-rpg-gradient-emerald text-white font-semibold',
-    'shadow-rpg-emerald',
-    'hover:brightness-110 hover:shadow-[0_0_28px_rgba(16,185,129,0.45)]',
+    'bg-rpg-gradient-emerald text-white font-semibold border border-emerald-500/40',
+    'shadow-sm',
+    'hover:brightness-105',
     'active:brightness-90 active:scale-[0.98]',
     'disabled:opacity-50 disabled:cursor-not-allowed',
   ].join(' '),
 
   arcane: [
-    'bg-rpg-gradient-arcane text-white font-semibold',
-    'shadow-rpg-arcane',
-    'hover:brightness-110 hover:shadow-[0_0_28px_rgba(124,58,237,0.45)]',
+    'bg-rpg-gradient-arcane text-white font-semibold border border-purple-500/40',
+    'shadow-sm',
+    'hover:brightness-105',
     'active:brightness-90 active:scale-[0.98]',
     'disabled:opacity-50 disabled:cursor-not-allowed',
   ].join(' '),

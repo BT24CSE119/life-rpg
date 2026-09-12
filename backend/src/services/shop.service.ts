@@ -13,6 +13,87 @@ import { createNotification } from './notification.service';
 import { realtimeService } from './realtime.service';
 
 export const INITIAL_SHOP_ITEMS = [
+  // ── Character Avatars & Skins ──
+  {
+    name: 'Cyber Knight Avatar',
+    description: 'A neon-clad cyber warrior forged in the future realms of high productivity.',
+    type: ItemType.COSMETIC,
+    rarity: ItemRarity.EPIC,
+    category: 'AVATAR',
+    goldCost: 120,
+    iconEmoji: '🤖',
+    imageUrl: '/avatars/cyber-knight.jpg',
+  },
+  {
+    name: 'Shadow Assassin Skin',
+    description: 'Cloaked in midnight mist, striking down distractions with lethal stealth.',
+    type: ItemType.COSMETIC,
+    rarity: ItemRarity.RARE,
+    category: 'AVATAR',
+    goldCost: 20,
+    iconEmoji: '🥷',
+    imageUrl: '/avatars/shadow-assassin.jpg',
+  },
+  {
+    name: 'Archmage Sorcerer Avatar',
+    description: 'Master of deep arcane focus and ancient intellect spells.',
+    type: ItemType.COSMETIC,
+    rarity: ItemRarity.EPIC,
+    category: 'AVATAR',
+    goldCost: 140,
+    iconEmoji: '🧙',
+    imageUrl: '/avatars/archmage-sorcerer.jpg',
+  },
+  {
+    name: 'Holy Paladin Skin',
+    description: 'A radiant guardian of habits clad in shining divine golden armor.',
+    type: ItemType.COSMETIC,
+    rarity: ItemRarity.LEGENDARY,
+    category: 'AVATAR',
+    goldCost: 200,
+    iconEmoji: '🛡️',
+    imageUrl: '/avatars/holy-paladin.jpg',
+  },
+
+  // ── Weapons & Armory ──
+  {
+    name: 'Excalibur of Focus',
+    description: 'A legendary blade forged from pure willpower. Cleaves through procrastination (+2 STR).',
+    type: ItemType.WEAPON,
+    rarity: ItemRarity.LEGENDARY,
+    category: 'WEAPON',
+    goldCost: 180,
+    iconEmoji: '⚔️',
+  },
+  {
+    name: 'Tome of Arcane Wisdom',
+    description: 'Contains forgotten formulas for boundless intellect and study mastery (+2 INT).',
+    type: ItemType.WEAPON,
+    rarity: ItemRarity.RARE,
+    category: 'WEAPON',
+    goldCost: 85,
+    iconEmoji: '📖',
+  },
+  {
+    name: 'Aegis of Willpower',
+    description: 'An impenetrable round shield that blocks mental fatigue and impulses (+2 DIS).',
+    type: ItemType.ARMOR,
+    rarity: ItemRarity.RARE,
+    category: 'ARMOR',
+    goldCost: 90,
+    iconEmoji: '🛡️',
+  },
+  {
+    name: 'Boots of Swift Momentum',
+    description: 'Enchanted winged greaves granting tireless daily stamina (+2 STA).',
+    type: ItemType.ARMOR,
+    rarity: ItemRarity.UNCOMMON,
+    category: 'ARMOR',
+    goldCost: 50,
+    iconEmoji: '👢',
+  },
+
+  // ── Cosmetics, Titles & Badges ──
   {
     name: 'Crown of Focus',
     description: 'A radiant golden crown that gleams upon the brow of disciplined adventurers.',
@@ -84,6 +165,7 @@ export const ensureShopItemsSeeded = async () => {
         category: item.category,
         goldCost: item.goldCost,
         iconEmoji: item.iconEmoji,
+        imageUrl: item.imageUrl || null,
         isActive: true,
       },
     });

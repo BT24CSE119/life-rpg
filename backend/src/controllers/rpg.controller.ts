@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import type { AuthenticatedRequest } from '../types/auth';
-import { getGoldHistory, getProfile, getStats, getWallet, getXpHistory } from '../services/rpg.service';
+import { getGoldHistory, getLeaderboard, getProfile, getStats, getWallet, getXpHistory } from '../services/rpg.service';
 
 const getUserId = (req: Request): string => (req as AuthenticatedRequest).user.id;
 const paginationSchema = z.object({
@@ -46,5 +46,14 @@ export const goldHistoryHandler = async (req: Request, res: Response, next: Next
       return;
     }
     res.status(200).json({ success: true, message: 'Gold history fetched successfully', data: await getGoldHistory(getUserId(req), parsed.data.page, parsed.data.limit) });
+  } catch (error) { next(error); }
+};
+
+export const leaderboardHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const sortBy = req.query.sortBy === 'streak' ? 'streak' : 'level';
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const leaderboard = await getLeaderboard(sortBy, limit);
+    res.status(200).json({ success: true, message: 'Leaderboard fetched successfully', data: { leaderboard } });
   } catch (error) { next(error); }
 };

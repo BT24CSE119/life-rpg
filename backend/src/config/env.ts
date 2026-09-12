@@ -4,9 +4,10 @@ import path from 'path';
 
 // Load .env from project root — try multiple locations for resilience
 const envPaths = [
-  path.resolve(process.cwd(), '../.env'),  // run from /backend
-  path.resolve(process.cwd(), '.env'),     // run from project root
-  path.resolve(__dirname, '../../.env'),   // run from /backend/src
+  path.resolve(process.cwd(), '.env'),     // current working directory
+  path.resolve(__dirname, '../.env'),      // backend directory when running from src
+  path.resolve(process.cwd(), '../.env'),  // root fallback
+  path.resolve(__dirname, '../../.env'),   // root fallback from src
 ];
 
 for (const envPath of envPaths) {
@@ -28,8 +29,10 @@ const envSchema = z.object({
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 chars'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 chars'),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('7d'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('90d'),
+  // Google OAuth
+  GOOGLE_CLIENT_ID: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

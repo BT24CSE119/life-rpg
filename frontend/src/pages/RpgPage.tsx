@@ -3,10 +3,12 @@ import AttributesCard from '../components/AttributesCard';
 import RpgProgressCard from '../components/RpgProgressCard';
 import GoldBalanceCard from '../components/GoldBalanceCard';
 import GoldHistoryList from '../components/GoldHistoryList';
+import { useAuth } from '../hooks/useAuth';
 import { getRpgStats, getXpHistory } from '../services/rpg';
 import type { RpgStats, XpHistoryEntry } from '../types';
 
 const RpgPage: React.FC = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState<RpgStats | null>(null);
   const [xpHistory, setXpHistory] = useState<XpHistoryEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'gold' | 'xp'>('all');
@@ -35,18 +37,36 @@ const RpgPage: React.FC = () => {
   }, [load]);
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
-      <div className="max-w-5xl mx-auto">
-        <header className="mb-8">
-          <p className="text-rpg-gold text-sm font-semibold uppercase tracking-wider">
-            Character Sheet & Economy
-          </p>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold text-rpg-text">
-            Adventurer Progression & Treasury
-          </h1>
-          <p className="text-rpg-text-muted mt-1">
-            Complete quests to earn XP, level up, and build your gold wealth.
-          </p>
+    <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-8 flex items-center gap-5">
+          {user?.avatarUrl && (
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-amber-400/80 shadow-[0_0_25px_rgba(245,200,66,0.3)] bg-black/40">
+                <img
+                  src={user.avatarUrl}
+                  alt={user.username}
+                  className="w-full h-full object-cover object-center"
+                />
+              </div>
+              {stats?.level && (
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 text-black font-mono font-black text-[10px] flex items-center justify-center border-2 border-[#131728] shadow-md">
+                  {stats.level}
+                </div>
+              )}
+            </div>
+          )}
+          <div>
+            <p className="text-rpg-gold text-sm font-semibold uppercase tracking-wider">
+              Character Sheet & Economy
+            </p>
+            <h1 className="font-display text-3xl sm:text-4xl font-bold text-rpg-text">
+              {user?.username ? `${user.username}'s Progression` : 'Adventurer Progression & Treasury'}
+            </h1>
+            <p className="text-rpg-text-muted mt-1">
+              Complete quests to earn XP, level up, and build your gold wealth.
+            </p>
+          </div>
         </header>
 
         {loading ? (

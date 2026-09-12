@@ -13,12 +13,19 @@ import RpgPage from './pages/RpgPage';
 import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
 import AchievementsPage from './pages/AchievementsPage';
-import HealthStatus from './components/HealthStatus';
+import LeaderboardPage from './pages/LeaderboardPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import ScrollToTop from './components/ScrollToTop';
+import OfflineBanner from './components/OfflineBanner';
+
 import { RpgProvider } from './context/RpgContext';
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <ScrollToTop />
+      <OfflineBanner />
       <AuthProvider>
         <RpgProvider>
           {/* Accessible skip-to-content link */}
@@ -59,6 +66,9 @@ const App: React.FC = () => {
             <Route path="/shop" element={<ProtectedRoute><ShopPage /></ProtectedRoute>} />
             <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
             <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
+            <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
 
             {/* 404 catch-all */}
             <Route
@@ -86,8 +96,7 @@ const App: React.FC = () => {
 
         <Footer />
 
-        {/* Dev-only health status indicator */}
-        {import.meta.env.DEV && <HealthStatus />}
+
         </RpgProvider>
       </AuthProvider>
     </BrowserRouter>

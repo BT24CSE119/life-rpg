@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageContainer from '../layouts/PageContainer';
 import { getAchievements } from '../services/achievement';
 import type { AchievementItem } from '../types';
@@ -12,6 +13,7 @@ const RARITY_CONFIG: Record<string, { badge: string; glow: string }> = {
 };
 
 const AchievementsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [unlockedCount, setUnlockedCount] = useState<number>(0);
@@ -33,6 +35,7 @@ const AchievementsPage: React.FC = () => {
   };
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     loadData();
   }, []);
 
@@ -46,11 +49,27 @@ const AchievementsPage: React.FC = () => {
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
       <PageContainer>
-        {/* Header */}
+        {/* Header with Back Navigation */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-6 border-b border-rpg-border/60">
           <div>
+            {/* Back Button */}
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg bg-rpg-surface-2/70 hover:bg-rpg-surface-2 border border-white/5 hover:border-amber-500/30 text-xs font-semibold text-rpg-text-muted hover:text-amber-300 transition-all group active:scale-95"
+            >
+              <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              <span>Back</span>
+            </button>
+
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl" aria-hidden="true">🏆</span>
+              <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="6" />
+                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+              </svg>
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">
                 Trophies & Feats of Valor
               </span>

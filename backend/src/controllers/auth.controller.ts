@@ -3,11 +3,15 @@ import { env } from '../config/env';
 import {
   signupSchema,
   loginSchema,
+  googleAuthSchema,
   signupUser,
   loginUser,
+  loginWithGoogle,
   refreshSession,
   logoutUser,
   getUserById,
+  checkUsernameAvailability,
+  updateUsername,
 } from '../services/auth.service';
 import type { AuthenticatedRequest } from '../types/auth';
 
@@ -19,15 +23,15 @@ const refreshCookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
   sameSite: (env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-  path: '/api/auth',         // Scoped — only sent to auth endpoints
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+  path: '/',                         // Root path so cookie is reliably persisted and sent across reverse proxies/browsers
+  maxAge: 90 * 24 * 60 * 60 * 1000,  // 90 days persistent session until manual logout
 };
 
 const clearCookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
   sameSite: (env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-  path: '/api/auth',
+  path: '/',
 };
 
 // ── Controllers ───────────────────────────────────────────────────────────────
@@ -62,6 +66,45 @@ export const signup = async (
       success: true,
       message: 'Account created successfully. Please log in.',
       data: { user },
+    });
+  } catch (err: any) {
+    if (err.statusCode === 409 && err.suggestions) {
+      res.status(409).json({
+        success: false,
+        error: {
+          message: err.message,
+          field: 'username',
+          suggestions: err.suggestions,
+        },
+      });
+      return;
+    }
+    next(err);
+  }
+};
+
+/**
+ * GET /api/auth/check-username?username=...
+ */
+export const checkUsername = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const username = req.query.username as string | undefined;
+    if (!username || username.trim().length < 3) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Username must be at least 3 characters' },
+      });
+      return;
+    }
+
+    const result = await checkUsernameAvailability(username);
+    res.status(200).json({
+      success: true,
+      data: result,
     });
   } catch (err) {
     next(err);
@@ -198,3 +241,83 @@ export const getMe = async (
     next(err);
   }
 };
+
+/**
+ * POST /api/auth/google
+ * Authenticate or register with a Google ID token credential.
+ */
+export const googleAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const result = googleAuthSchema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          message: 'Invalid Google authentication request',
+          details: result.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+      });
+      return;
+    }
+
+    const { user, accessToken, rawRefreshToken } = await loginWithGoogle(
+      result.data.credential,
+      result.data.mode
+    );
+
+    // Set HttpOnly refresh token cookie
+    res.cookie(REFRESH_COOKIE_NAME, rawRefreshToken, refreshCookieOptions);
+
+    res.status(200).json({
+      success: true,
+      message: 'Google authentication successful',
+      data: {
+        user,
+        accessToken,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/auth/me (protected)
+ * Update username for the current authenticated user
+ */
+export const updateProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const { username } = req.body;
+
+    if (!username || typeof username !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Username is required and must be a string' },
+      });
+      return;
+    }
+
+    const updatedUser = await updateUsername(authReq.user.id, username);
+
+    res.status(200).json({
+      success: true,
+      message: 'Adventurer name updated successfully',
+      data: { user: updatedUser },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

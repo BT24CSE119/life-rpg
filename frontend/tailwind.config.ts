@@ -81,9 +81,9 @@ const config: Config = {
 
       // ── Box Shadow ────────────────────────────────────────────────────────
       boxShadow: {
-        'rpg-gold':    '0 0 20px rgba(245, 200, 66, 0.25), 0 4px 16px rgba(0,0,0,0.4)',
-        'rpg-emerald': '0 0 20px rgba(16, 185, 129, 0.25), 0 4px 16px rgba(0,0,0,0.4)',
-        'rpg-arcane':  '0 0 20px rgba(124, 58, 237, 0.25), 0 4px 16px rgba(0,0,0,0.4)',
+        'rpg-gold':    '0 2px 8px rgba(0,0,0,0.4), 0 0 6px rgba(245, 200, 66, 0.15)',
+        'rpg-emerald': '0 2px 8px rgba(0,0,0,0.4), 0 0 6px rgba(16, 185, 129, 0.15)',
+        'rpg-arcane':  '0 2px 8px rgba(0,0,0,0.4), 0 0 6px rgba(124, 58, 237, 0.15)',
         'rpg-card':    '0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
         'rpg-inner':   'inset 0 2px 8px rgba(0,0,0,0.4)',
         'rpg-hover':   '0 8px 32px rgba(0,0,0,0.6)',

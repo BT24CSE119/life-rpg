@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Quest, QuestStatusType, QuestPriority, CreateQuestInput, UpdateQuestInput, RpgProfile } from '../types';
 import {
   getQuests as fetchQuests,
@@ -14,24 +14,25 @@ import RpgProgressCard from '../components/RpgProgressCard';
 import LevelUpModal from '../components/LevelUpModal';
 import FloatingReward, { FloatingRewardItem } from '../components/FloatingReward';
 import { getRpgProfile } from '../services/rpg';
+import { useRpg } from '../context/RpgContext';
 
 // ── Filter Configs ────────────────────────────────────────────────────────────
 
-const STATUS_FILTERS: { value: QuestStatusType | 'ALL'; label: string; icon: string }[] = [
-  { value: 'TODO', label: 'To Do', icon: '📝' },
-  { value: 'IN_PROGRESS', label: 'In Progress', icon: '⚔️' },
-  { value: 'ALL',       label: 'All',         icon: '📋' },
-  { value: 'ACTIVE',    label: 'Active',      icon: '⚔️' },
-  { value: 'COMPLETED', label: 'Completed',   icon: '✅' },
-  { value: 'FAILED',    label: 'Failed',      icon: '❌' },
-  { value: 'ABANDONED', label: 'Abandoned',   icon: '🏳️' },
+const STATUS_FILTERS: { value: QuestStatusType | 'ALL'; label: string }[] = [
+  { value: 'TODO', label: 'To Do' },
+  { value: 'IN_PROGRESS', label: 'In Progress' },
+  { value: 'ALL', label: 'All' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'FAILED', label: 'Failed' },
+  { value: 'ABANDONED', label: 'Abandoned' },
 ];
 
-const PRIORITY_FILTERS: { value: QuestPriority | 'ALL'; label: string; icon: string }[] = [
-  { value: 'ALL',    label: 'All',    icon: '🎯' },
-  { value: 'HIGH',   label: 'High',   icon: '🔴' },
-  { value: 'MEDIUM', label: 'Medium', icon: '🟡' },
-  { value: 'LOW',    label: 'Low',    icon: '🟢' },
+const PRIORITY_FILTERS: { value: QuestPriority | 'ALL'; label: string }[] = [
+  { value: 'ALL', label: 'All' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'LOW', label: 'Low' },
 ];
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -56,6 +57,20 @@ const QuestBoardPage: React.FC = () => {
   // Filters
   const [statusFilter, setStatusFilter] = useState<QuestStatusType | 'ALL'>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<QuestPriority | 'ALL'>('ALL');
+
+  // Instant in-memory filtered quests: zero skeleton wireframe delay when switching tabs
+  const filteredQuests = useMemo(() => {
+    return quests.filter((q) => {
+      const matchStatus =
+        statusFilter === 'ALL'
+          ? true
+          : statusFilter === 'ACTIVE'
+          ? q.status === 'ACTIVE' || q.status === 'IN_PROGRESS'
+          : q.status === statusFilter;
+      const matchPriority = priorityFilter === 'ALL' || q.priority === priorityFilter;
+      return matchStatus && matchPriority;
+    });
+  }, [quests, statusFilter, priorityFilter]);
 
   // Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -94,14 +109,12 @@ const QuestBoardPage: React.FC = () => {
 
   // ── Fetch Quests ──────────────────────────────────────────────────────────
 
-  const loadQuests = useCallback(async () => {
-    setIsLoading(true);
+  const loadQuests = useCallback(async (showSkeleton = false) => {
+    if (showSkeleton) setIsLoading(true);
     setError(null);
     try {
-      const filters: { status?: QuestStatusType; priority?: QuestPriority } = {};
-      if (statusFilter !== 'ALL') filters.status = statusFilter;
-      if (priorityFilter !== 'ALL') filters.priority = priorityFilter;
-      const data = await fetchQuests(filters);
+      // Fetch all quests and cache them so tab switching is instant
+      const data = await fetchQuests();
       setQuests(data);
     } catch (err) {
       const e = err as Error;
@@ -109,14 +122,32 @@ const QuestBoardPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, priorityFilter]);
+  }, []);
 
   useEffect(() => {
-    loadQuests();
+    // Only show the skeleton wireframe on initial page load
+    loadQuests(true);
   }, [loadQuests]);
 
   useEffect(() => {
     getRpgProfile().then(setProfile).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is currently typing in an input, textarea, or select
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        return;
+      }
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setEditingQuest(null);
+        setIsFormOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // ── Create ────────────────────────────────────────────────────────────────
@@ -178,30 +209,50 @@ const QuestBoardPage: React.FC = () => {
     }
   };
 
+  const { setGoldBalance } = useRpg();
+
   // ── Complete ──────────────────────────────────────────────────────────────
 
   const handleComplete = async (quest: Quest) => {
     setCompletingId(quest.id);
+
+    // Instant optimistic calculation
+    const optimisticGold = quest.priority === 'HIGH' ? 50 : quest.priority === 'MEDIUM' ? 30 : 15;
+    const optimisticXp = quest.priority === 'HIGH' ? 80 : quest.priority === 'MEDIUM' ? 50 : 25;
+    const attrName = (quest.category || 'Strength').toLowerCase();
+    const formattedAttrName = attrName.charAt(0).toUpperCase() + attrName.slice(1);
+    const attrBonus = quest.priority === 'HIGH' ? 2 : 1;
+
+    // Instant floating reward with attribute bonus
+    const rewardKey = Date.now();
+    setFloatingRewards((prev) => [
+      ...prev,
+      {
+        id: rewardKey,
+        xp: optimisticXp,
+        gold: optimisticGold,
+        attribute: {
+          name: formattedAttrName,
+          amount: attrBonus,
+        },
+      },
+    ]);
+    setTimeout(() => {
+      setFloatingRewards((prev) => prev.filter((r) => r.id !== rewardKey));
+    }, 1400);
+
+    // Optimistically mark quest completed on the board & update gold
+    setGoldBalance((prev) => (prev !== null ? prev + optimisticGold : prev));
+    setQuests((prev) =>
+      prev.map((q) => (q.id === quest.id ? { ...q, status: 'COMPLETED' as const } : q))
+    );
+
     try {
       const completed = await completeQuest(quest.id);
       setQuests((prev) =>
         prev.map((q) => (q.id === completed.quest.id ? completed.quest : q))
       );
       if (!completed.duplicateCompletion) {
-        // Floating reward badge animation
-        const rewardKey = Date.now();
-        setFloatingRewards((prev) => [
-          ...prev,
-          {
-            id: rewardKey,
-            xp: completed.reward.xpAwarded,
-            gold: completed.reward.goldAwarded,
-          },
-        ]);
-        setTimeout(() => {
-          setFloatingRewards((prev) => prev.filter((r) => r.id !== rewardKey));
-        }, 1300);
-
         if (completed.progression.levelUp) {
           setLevelUpData({
             isOpen: true,
@@ -210,8 +261,11 @@ const QuestBoardPage: React.FC = () => {
             goldEarned: completed.reward.goldAwarded,
           });
         } else {
+          const statText = completed.reward.attributeGained
+            ? ` · +${completed.reward.attributeGained.amount} ${completed.reward.attributeGained.attribute.toUpperCase()}`
+            : '';
           addToast(
-            `+${completed.reward.xpAwarded} XP · +${completed.reward.goldAwarded} Gold`,
+            `+${completed.reward.xpAwarded} XP · +${completed.reward.goldAwarded} Gold${statText}`,
             'success'
           );
         }
@@ -222,21 +276,49 @@ const QuestBoardPage: React.FC = () => {
     } catch (err) {
       const e = err as Error;
       addToast(e.message ?? 'Failed to complete quest', 'error');
+      // Re-fetch on error to revert state
+      loadQuests();
     } finally {
       setCompletingId(null);
+    }
+  };
+
+  // ── 1-Click Status Change (e.g. To Do -> In Progress) ──────────────────────
+  const handleStatusChange = async (quest: Quest, newStatus: Quest['status']) => {
+    // Optimistic UI update
+    setQuests((prev) =>
+      prev.map((q) => (q.id === quest.id ? { ...q, status: newStatus } : q))
+    );
+
+    const statusLabels: Record<string, string> = {
+      IN_PROGRESS: 'Quest started: In Progress',
+      TODO: 'Quest paused: moved to To Do',
+      ACTIVE: 'Quest set to Active',
+    };
+    addToast(statusLabels[newStatus] || `Quest status updated to ${newStatus}`, 'info');
+
+    try {
+      const updated = await updateQuest(quest.id, { status: newStatus as any });
+      setQuests((prev) =>
+        prev.map((q) => (q.id === updated.id ? updated : q))
+      );
+    } catch (err) {
+      const e = err as Error;
+      addToast(e.message ?? 'Failed to update quest status', 'error');
+      loadQuests();
     }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-rpg-text mb-1">
-              📜 Quest Board
+              Quest Board
             </h1>
             <p className="text-rpg-text-muted text-sm">
               Turn your real-life goals into completed quests and claim server-verified XP and Gold.
@@ -244,9 +326,17 @@ const QuestBoardPage: React.FC = () => {
           </div>
           <button
             onClick={handleCreate}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 active:scale-95 transition-all shadow-rpg-gold"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-105 active:scale-95 transition-all shadow-sm border border-amber-500/40"
+            title="Create a new quest (Shortcut: N)"
           >
-            ➕ New Quest
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>New Quest</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase rounded bg-black/20 text-rpg-bg border border-black/10">
+              N
+            </kbd>
           </button>
         </div>
 
@@ -260,13 +350,12 @@ const QuestBoardPage: React.FC = () => {
               <button
                 key={f.value}
                 onClick={() => setStatusFilter(f.value)}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                   statusFilter === f.value
                     ? 'bg-amber-950/60 text-amber-300 border-amber-500/40 shadow-sm'
                     : 'bg-rpg-surface text-rpg-text-muted border-rpg-border hover:border-rpg-border-2'
                 }`}
               >
-                <span aria-hidden="true">{f.icon}</span>
                 {f.label}
               </button>
             ))}
@@ -278,13 +367,12 @@ const QuestBoardPage: React.FC = () => {
               <button
                 key={f.value}
                 onClick={() => setPriorityFilter(f.value)}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                   priorityFilter === f.value
                     ? 'bg-purple-950/60 text-purple-300 border-purple-500/40 shadow-sm'
                     : 'bg-rpg-surface text-rpg-text-muted border-rpg-border hover:border-rpg-border-2'
                 }`}
               >
-                <span aria-hidden="true">{f.icon}</span>
                 {f.label}
               </button>
             ))}
@@ -292,25 +380,19 @@ const QuestBoardPage: React.FC = () => {
         </div>
 
         {/* Content */}
-        {isLoading ? (
-          // Loading state
+        {isLoading && quests.length === 0 ? (
+          // Loading state (only shown on initial load if no quests are cached yet)
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 animate-pulse">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="bg-rpg-surface border border-rpg-border rounded-xl p-5"
+                className="bg-rpg-surface border border-rpg-border rounded-xl p-5 h-44"
               >
-                <div className="flex gap-2 mb-3">
-                  <div className="h-5 w-16 bg-rpg-surface-3 rounded-full" />
-                  <div className="h-5 w-14 bg-rpg-surface-3 rounded-full" />
-                </div>
-                <div className="h-5 w-3/4 bg-rpg-surface-3 rounded mb-2" />
-                <div className="h-4 w-full bg-rpg-surface-3 rounded mb-1" />
-                <div className="h-4 w-2/3 bg-rpg-surface-3 rounded mb-4" />
-                <div className="flex gap-2">
-                  <div className="h-7 w-20 bg-rpg-surface-3 rounded" />
-                  <div className="h-7 w-14 bg-rpg-surface-3 rounded" />
-                  <div className="h-7 w-16 bg-rpg-surface-3 rounded" />
+                <div className="h-4 bg-rpg-border rounded w-3/4 mb-3" />
+                <div className="h-3 bg-rpg-border rounded w-1/2 mb-6" />
+                <div className="flex justify-between items-center">
+                  <div className="h-6 bg-rpg-border rounded w-20" />
+                  <div className="h-6 bg-rpg-border rounded w-16" />
                 </div>
               </div>
             ))}
@@ -318,7 +400,11 @@ const QuestBoardPage: React.FC = () => {
         ) : error ? (
           // Error state
           <div className="text-center py-16 bg-rpg-surface border border-rpg-border rounded-xl">
-            <div className="text-5xl mb-4" aria-hidden="true">💀</div>
+            <svg className="w-12 h-12 text-red-400/70 mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
             <h2 className="font-display text-xl font-bold text-rpg-text mb-2">
               Something went wrong
             </h2>
@@ -326,39 +412,60 @@ const QuestBoardPage: React.FC = () => {
               {error}
             </p>
             <button
-              onClick={loadQuests}
+              onClick={() => loadQuests(true)}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 transition-all active:scale-95"
             >
-              🔄 Retry
+              Retry
             </button>
           </div>
-        ) : quests.length === 0 ? (
+        ) : filteredQuests.length === 0 ? (
           // Empty state
           <div className="text-center py-16 bg-rpg-surface border border-rpg-border rounded-xl">
-            <div className="text-6xl mb-4" aria-hidden="true">📜</div>
+            <svg className="w-12 h-12 text-amber-400/50 mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
             <h2 className="font-display text-xl font-bold text-rpg-text mb-2">
-              No quests yet
+              {quests.length === 0 ? 'No quests yet' : 'No matching quests'}
             </h2>
             <p className="text-rpg-text-muted text-sm mb-6 max-w-sm mx-auto">
-              Create your first quest and begin your heroic journey.
+              {quests.length === 0
+                ? 'Create your first quest and begin your journey.'
+                : 'No quests found for the selected filter.'}
             </p>
-            <button
-              onClick={handleCreate}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-110 transition-all shadow-rpg-gold active:scale-95"
-            >
-              ⚔️ Create Your First Quest
-            </button>
+            {quests.length === 0 ? (
+              <button
+                onClick={handleCreate}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-rpg-bg bg-rpg-gradient-gold hover:brightness-105 transition-all shadow-sm border border-amber-500/40 active:scale-95"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Create Your First Quest
+              </button>
+            ) : (
+              <button
+                onClick={() => { setStatusFilter('ALL'); setPriorityFilter('ALL'); }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-rpg-accent border border-rpg-accent/30 hover:bg-rpg-accent/10 transition-all"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           // Quest grid
           <div className="grid gap-4 sm:grid-cols-2">
-            {quests.map((quest) => (
+            {filteredQuests.map((quest) => (
               <QuestCard
                 key={quest.id}
                 quest={quest}
                 onEdit={handleEdit}
                 onDelete={(q) => setDeletingQuest(q)}
                 onComplete={handleComplete}
+                onStatusChange={handleStatusChange}
                 isCompleting={completingId === quest.id}
               />
             ))}
@@ -366,9 +473,9 @@ const QuestBoardPage: React.FC = () => {
         )}
 
         {/* Quest count */}
-        {!isLoading && !error && quests.length > 0 && (
+        {!isLoading && !error && filteredQuests.length > 0 && (
           <p className="text-center text-xs text-rpg-text-faint mt-6">
-            Showing {quests.length} quest{quests.length !== 1 ? 's' : ''}
+            Showing {filteredQuests.length} quest{filteredQuests.length !== 1 ? 's' : ''}
           </p>
         )}
       </div>

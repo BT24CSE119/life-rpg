@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import PageContainer from '../layouts/PageContainer';
 import RPGButton from '../components/RPGButton';
 import RPGCard from '../components/RPGCard';
@@ -177,14 +178,6 @@ const LandingPage: React.FC = () => {
 
             {/* Left — text content */}
             <div className="flex-1 text-center lg:text-left">
-              {/* Phase badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-rpg-gold/30 bg-rpg-gold/5 mb-6 animate-fade-in">
-                <span className="w-2 h-2 rounded-full bg-rpg-emerald animate-pulse" aria-hidden="true" />
-                <span className="text-xs font-mono text-rpg-gold tracking-widest uppercase">
-                  Phase 1 — Foundation
-                </span>
-              </div>
-
               <h1
                 id="hero-heading"
                 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.05] mb-6 animate-fade-in delay-100"
@@ -218,19 +211,23 @@ const LandingPage: React.FC = () => {
 
               {/* CTA buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 animate-fade-in delay-400">
-                <RPGButton variant="gold" size="xl" leftIcon={<span>⚔️</span>}>
-                  Begin Your Quest
-                </RPGButton>
-                <RPGButton variant="ghost" size="xl" leftIcon={<span>👁️</span>}>
-                  View Demo
-                </RPGButton>
+                <Link to="/signup">
+                  <RPGButton variant="gold" size="xl" leftIcon={<span>⚔️</span>}>
+                    Begin Your Quest
+                  </RPGButton>
+                </Link>
+                <a href="#preview">
+                  <RPGButton variant="ghost" size="xl" leftIcon={<span>👁️</span>}>
+                    View Demo
+                  </RPGButton>
+                </a>
               </div>
             </div>
 
             {/* Right — character preview card */}
             <div className="flex-1 max-w-sm w-full animate-fade-in delay-300">
               <div className="animate-float">
-                <CharacterStatsCard character={PREVIEW_CHARACTER} isPreview />
+                <CharacterStatsCard character={PREVIEW_CHARACTER} />
               </div>
             </div>
           </div>
@@ -334,13 +331,13 @@ const LandingPage: React.FC = () => {
         <PageContainer>
           <div className="text-center mb-16">
             <span className="text-xs font-mono tracking-widest uppercase text-rpg-gold mb-3 block">
-              ⚠ Static UI Preview — Not Real Data
+              Quest System
             </span>
             <h2 id="preview-heading" className="font-display text-4xl font-bold text-rpg-text mb-4">
               Your Quest Board
             </h2>
             <p className="text-rpg-text-muted max-w-xl mx-auto">
-              This is a visual preview of how your quest board will look. Real quests come in Phase 2.
+              Transform daily tasks and habits into RPG quests to earn XP, gold, and unlock powerful achievements.
             </p>
           </div>
 
@@ -454,12 +451,16 @@ const LandingPage: React.FC = () => {
                 Every achievement is a level up. Start your journey today.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <RPGButton variant="gold" size="xl" leftIcon="⚔️">
-                  Create Your Character
-                </RPGButton>
-                <RPGButton variant="ghost" size="xl">
-                  Learn More
-                </RPGButton>
+                <Link to="/signup">
+                  <RPGButton variant="gold" size="xl" leftIcon="⚔️">
+                    Create Your Character
+                  </RPGButton>
+                </Link>
+                <a href="#how-it-works">
+                  <RPGButton variant="ghost" size="xl">
+                    Learn More
+                  </RPGButton>
+                </a>
               </div>
             </div>
           </div>

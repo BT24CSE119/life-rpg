@@ -4,6 +4,10 @@ export interface FloatingRewardItem {
   id: number;
   xp?: number;
   gold?: number;
+  attribute?: {
+    name: string;
+    amount: number;
+  };
   x?: number;
   y?: number;
 }
@@ -35,6 +39,11 @@ const FloatingReward: React.FC<FloatingRewardProps> = ({ rewards }) => {
           {r.gold !== undefined && r.gold > 0 && (
             <span className="px-3.5 py-1 rounded-full text-sm font-display font-extrabold font-mono bg-amber-900/90 text-amber-300 border border-amber-400/50 shadow-[0_0_15px_rgba(245,200,66,0.5)]">
               🪙 +{r.gold} Gold
+            </span>
+          )}
+          {r.attribute !== undefined && r.attribute.amount > 0 && (
+            <span className="px-3.5 py-1 rounded-full text-sm font-display font-extrabold font-mono bg-blue-900/90 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+              ⚡ +{r.attribute.amount} {r.attribute.name}
             </span>
           )}
         </div>

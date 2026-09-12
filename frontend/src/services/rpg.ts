@@ -1,9 +1,16 @@
 import apiClient from './api';
-import type { GoldHistoryResult, GoldWalletResult, RpgProfile, RpgStats, XpHistoryResult } from '../types';
+import type { GoldHistoryResult, GoldWalletResult, LeaderboardEntry, RpgProfile, RpgStats, XpHistoryResult } from '../types';
 
 export const getRpgProfile = async (): Promise<RpgProfile> => {
   const { data } = await apiClient.get<{ data: { profile: RpgProfile } }>('/rpg/profile');
   return data.data.profile;
+};
+
+export const getLeaderboard = async (sortBy: 'level' | 'streak' = 'level', limit = 20): Promise<LeaderboardEntry[]> => {
+  const { data } = await apiClient.get<{ data: { leaderboard: LeaderboardEntry[] } }>('/rpg/leaderboard', {
+    params: { sortBy, limit },
+  });
+  return data.data.leaderboard;
 };
 
 export const getXpHistory = async (page = 1, limit = 20): Promise<XpHistoryResult> => {

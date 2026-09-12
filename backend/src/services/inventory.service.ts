@@ -60,6 +60,14 @@ export const equipItem = async (userId: string, itemId: string) => {
         include: { item: true },
       });
 
+      // If equipping an AVATAR skin/portrait, update the user profile's avatarUrl
+      if (itemCategory === 'AVATAR' && inventoryEntry.item.imageUrl) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { avatarUrl: inventoryEntry.item.imageUrl },
+        });
+      }
+
       await tx.activityLog.create({
         data: {
           userId,
@@ -99,18 +107,31 @@ export const unequipItem = async (userId: string, itemId: string) => {
     throw error;
   }
 
-  const updated = await prisma.inventory.update({
-    where: { id: inventoryEntry.id },
-    data: { isEquipped: false },
-    include: { item: true },
-  });
+  const itemCategory = inventoryEntry.item.category || inventoryEntry.item.type;
 
-  await prisma.activityLog.create({
-    data: {
-      userId,
-      action: LogAction.ITEM_UNEQUIPPED,
-      metadata: { itemId, name: inventoryEntry.item.name },
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    const unequipped = await tx.inventory.update({
+      where: { id: inventoryEntry.id },
+      data: { isEquipped: false },
+      include: { item: true },
+    });
+
+    if (itemCategory === 'AVATAR') {
+      await tx.user.update({
+        where: { id: userId },
+        data: { avatarUrl: null },
+      });
+    }
+
+    await tx.activityLog.create({
+      data: {
+        userId,
+        action: LogAction.ITEM_UNEQUIPPED,
+        metadata: { itemId, name: inventoryEntry.item.name },
+      },
+    });
+
+    return unequipped;
   });
 
   realtimeService.emitUserEvent(userId, 'ITEM_UNEQUIPPED', {

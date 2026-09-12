@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageContainer from '../layouts/PageContainer';
 import { getShopItems, purchaseShopItem } from '../services/shop';
 import { useRpg } from '../context/RpgContext';
@@ -13,6 +14,7 @@ const RARITY_STYLES: Record<string, { badge: string; border: string }> = {
 };
 
 const ShopPage: React.FC = () => {
+  const navigate = useNavigate();
   const { setGoldBalance: setGlobalGold } = useRpg();
   const [items, setItems] = useState<ShopItem[]>([]);
   const [goldBalance, setGoldBalance] = useState<number>(0);
@@ -59,7 +61,17 @@ const ShopPage: React.FC = () => {
     }
   };
 
-  const categories = ['ALL', 'AVATAR_FRAME', 'TITLE', 'EFFECT', 'BADGE', 'BOOSTER'];
+  const categories = [
+    'ALL',
+    'AVATAR',
+    'WEAPON',
+    'ARMOR',
+    'AVATAR_FRAME',
+    'TITLE',
+    'EFFECT',
+    'BADGE',
+    'BOOSTER',
+  ];
   const filteredItems = items
     .filter((i) => selectedCategory === 'ALL' || (i.category || i.type) === selectedCategory)
     .filter((i) => !searchQuery.trim() || i.name.toLowerCase().includes(searchQuery.toLowerCase()) || i.description.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -67,26 +79,47 @@ const ShopPage: React.FC = () => {
   return (
     <div className="min-h-screen pt-24 pb-16 px-4">
       <PageContainer>
-        {/* Header */}
+        {/* Header with Back Navigation */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-6 border-b border-rpg-border/60">
           <div>
+            {/* Back Button */}
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg bg-rpg-surface-2/70 hover:bg-rpg-surface-2 border border-white/5 hover:border-amber-500/30 text-xs font-semibold text-rpg-text-muted hover:text-amber-300 transition-all group active:scale-95"
+            >
+              <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              <span>Back</span>
+            </button>
+
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl" aria-hidden="true">🪙</span>
+              <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 6v12M15 9.5a3.5 3.5 0 00-7 0c0 4 7 2 7 6a3.5 3.5 0 01-7 0" />
+              </svg>
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">
-                Guild Treasury & Bazaar
+                Guild Treasury & Armory
               </span>
             </div>
             <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-rpg-text">
-              Guild Shop
+              Character Store & Armory
             </h1>
             <p className="text-xs sm:text-sm text-rpg-text-muted mt-1 max-w-xl">
-              Spend hard-earned quest Gold on titles, avatar frames, magical themes, and booster elixirs.
+              Equip your adventurer with character avatars, weapons, legendary armor, titles, and magical boosters using earned quest Gold.
             </p>
           </div>
 
           {/* Treasury Balance Pill */}
           <div className="p-4 rounded-xl bg-gradient-to-br from-amber-950/50 to-rpg-surface border border-amber-500/40 shadow-sm flex items-center gap-3 shrink-0">
-            <span className="text-3xl animate-coin-sparkle" aria-hidden="true">🪙</span>
+            <div className="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 6v12M15 9.5a3.5 3.5 0 00-7 0c0 4 7 2 7 6a3.5 3.5 0 01-7 0" />
+              </svg>
+            </div>
             <div>
               <p className="text-[10px] font-mono uppercase tracking-widest text-amber-300 font-bold">
                 Your Treasury
@@ -121,11 +154,15 @@ const ShopPage: React.FC = () => {
           <div className="relative shrink-0 w-full sm:w-64">
             <input
               type="text"
-              placeholder="🔍 Search treasures..."
+              placeholder="Search catalog..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-rpg-surface-2 border border-rpg-border text-rpg-text focus:outline-none focus:border-amber-400"
+              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg bg-rpg-surface-2 border border-rpg-border text-rpg-text focus:outline-none focus:border-amber-400"
             />
+            <svg className="w-3.5 h-3.5 text-rpg-text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
@@ -146,7 +183,10 @@ const ShopPage: React.FC = () => {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-16 bg-rpg-surface border border-rpg-border rounded-xl">
-            <span className="text-4xl block mb-2" aria-hidden="true">🧙‍♂️</span>
+            <svg className="w-12 h-12 text-rpg-text-muted/50 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 6v12M15 9.5a3.5 3.5 0 0 0-7 0c0 4 7 2 7 6a3.5 3.5 0 0 1-7 0" />
+            </svg>
             <p className="text-rpg-text font-bold">No wares found in this category.</p>
           </div>
         ) : (
@@ -163,9 +203,19 @@ const ShopPage: React.FC = () => {
                   <div>
                     {/* Top row */}
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="text-3xl" aria-hidden="true">
-                        {item.iconEmoji || '📦'}
-                      </span>
+                      {item.imageUrl ? (
+                        <div className="relative w-14 h-14 rounded-xl overflow-hidden border-2 border-amber-400/50 shadow-md bg-black/40 group-hover:border-amber-300 transition-all">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-full h-full object-cover object-center"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-3xl" aria-hidden="true">
+                          {item.iconEmoji || '📦'}
+                        </span>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${rarityStyle.badge}`}>
                           {item.rarity}
@@ -197,7 +247,7 @@ const ShopPage: React.FC = () => {
                       disabled={!canAfford}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 ${
                         canAfford
-                          ? 'bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 shadow-rpg-gold'
+                          ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold border border-amber-500/50 shadow-sm'
                           : 'bg-rpg-surface-2 text-rpg-text-muted border border-rpg-border cursor-not-allowed opacity-60'
                       }`}
                     >
@@ -219,9 +269,19 @@ const ShopPage: React.FC = () => {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
           >
             <div className="w-full max-w-md p-6 bg-rpg-surface border border-amber-500/40 rounded-xl shadow-2xl text-center">
-              <span className="text-5xl block mb-3" aria-hidden="true">
-                {confirmItem.iconEmoji || '🪙'}
-              </span>
+              {confirmItem.imageUrl ? (
+                <div className="w-24 h-24 mx-auto mb-4 rounded-2xl overflow-hidden border-2 border-amber-400/60 shadow-[0_0_20px_rgba(245,200,66,0.3)]">
+                  <img
+                    src={confirmItem.imageUrl}
+                    alt={confirmItem.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <span className="text-5xl block mb-3" aria-hidden="true">
+                  {confirmItem.iconEmoji || '🪙'}
+                </span>
+              )}
               <h2 id="confirm-purchase-title" className="font-display text-xl font-bold text-rpg-text mb-1">
                 Confirm Acquisition
               </h2>
@@ -239,7 +299,7 @@ const ShopPage: React.FC = () => {
                 <button
                   onClick={handlePurchase}
                   disabled={purchasingId === confirmItem.id}
-                  className="px-5 py-2 rounded-lg text-xs font-bold bg-rpg-gradient-gold text-rpg-bg hover:brightness-110 shadow-rpg-gold active:scale-95 transition-all"
+                  className="px-5 py-2 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500/50 shadow-sm active:scale-95 transition-all disabled:opacity-50"
                 >
                   {purchasingId === confirmItem.id ? 'Acquiring…' : 'Confirm Purchase'}
                 </button>

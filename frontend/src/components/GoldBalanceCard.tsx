@@ -25,7 +25,7 @@ const GoldBalanceCard: React.FC<GoldBalanceCardProps> = ({
 
   return (
     <div
-      className={`rpg-hud-panel border border-rpg-border rounded-rpg-lg p-6 relative overflow-hidden group transition-all duration-300 hover:border-rpg-gold/40 ${className}`}
+      className={`rpg-hud-panel border border-rpg-border rounded-rpg-lg p-6 relative overflow-hidden group transition-all duration-300 hover:border-rpg-gold/40 h-full flex flex-col justify-between ${className}`}
     >
       {/* Background fantasy ambient glow */}
       <div
