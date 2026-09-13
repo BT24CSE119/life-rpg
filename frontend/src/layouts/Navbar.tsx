@@ -115,10 +115,37 @@ const Navbar: React.FC = () => {
           className="flex items-center justify-between h-16"
           aria-label="Main navigation"
         >
-          {/* Logo */}
+          {/* ── Mobile: Hamburger (left) ──────────────────────────────── */}
+          <div className="flex items-center md:hidden">
+            <button
+              className="flex flex-col gap-1.5 p-2 rounded-lg hover:bg-rpg-surface-2 border border-rpg-border/40 transition-colors"
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
+            >
+              <span
+                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
+                  mobileOpen ? 'rotate-45 translate-y-2 bg-amber-400' : ''
+                }`}
+              />
+              <span
+                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
+                  mobileOpen ? 'opacity-0' : ''
+                }`}
+              />
+              <span
+                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
+                  mobileOpen ? '-rotate-45 -translate-y-2 bg-amber-400' : ''
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Logo — centered on mobile, left on desktop */}
           <Link
             to="/"
-            className="flex items-center gap-2 group relative py-1"
+            className="flex items-center gap-2 group relative py-1 absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0"
             aria-label="Life RPG — Home"
           >
             <span className="text-rpg-gold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
@@ -257,7 +284,7 @@ const Navbar: React.FC = () => {
             ) : null}
           </div>
 
-          {/* Mobile controls */}
+          {/* ── Mobile: Profile + Bell (right) — replaces old mobile controls ── */}
           <div className="flex items-center gap-2 md:hidden">
             {isAuthenticated && (
               <>
@@ -265,30 +292,14 @@ const Navbar: React.FC = () => {
                 <UserMenuDropdown />
               </>
             )}
-
-            <button
-              className="flex flex-col gap-1.5 p-2 rounded-lg hover:bg-rpg-surface-2 border border-rpg-border/40 transition-colors"
-              onClick={() => setMobileOpen((o) => !o)}
-              aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              aria-expanded={mobileOpen}
-              aria-controls="mobile-menu"
-            >
-              <span
-                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
-                  mobileOpen ? 'rotate-45 translate-y-2 bg-amber-400' : ''
-                }`}
-              />
-              <span
-                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
-                  mobileOpen ? 'opacity-0' : ''
-                }`}
-              />
-              <span
-                className={`block w-5 h-0.5 bg-rpg-text-muted transition-all duration-300 ${
-                  mobileOpen ? '-rotate-45 -translate-y-2 bg-amber-400' : ''
-                }`}
-              />
-            </button>
+            {!isLoading && !isAuthenticated && (
+              <Link
+                to="/login"
+                className="text-xs font-semibold text-rpg-gold border border-rpg-gold/40 px-3 py-1.5 rounded-lg hover:bg-rpg-gold/10 transition-all"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </nav>
 
