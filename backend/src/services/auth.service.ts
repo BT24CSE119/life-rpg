@@ -228,15 +228,15 @@ export const loginUser = async (
     where: { email: normalizedEmail },
   });
 
-  // User exists but was created via Google — no password set
-  if (user && !user.passwordHash) {
-    const err = new Error('This account was created with Google Sign-In. Please use the "Continue with Google" button to log in.') as Error & { statusCode: number };
+  if (!user) {
+    const err = new Error('No account found with this email. Please sign up first.') as Error & { statusCode: number };
     err.statusCode = 401;
     throw err;
   }
 
-  if (!user) {
-    const err = new Error('No account found with this email. Please sign up first.') as Error & { statusCode: number };
+  // User exists but was created via Google — no password set
+  if (!user.passwordHash) {
+    const err = new Error('This account was created with Google Sign-In. Please use the "Continue with Google" button to log in.') as Error & { statusCode: number };
     err.statusCode = 401;
     throw err;
   }
