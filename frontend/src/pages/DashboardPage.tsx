@@ -533,9 +533,9 @@ const DashboardPage: React.FC = () => {
             </section>
 
             {/* ── 6. Main Operations Grid (Balanced 2-Column Layout) ───────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {/* Left Column: Active Quests, Realm Directory, and Completed Accomplishments */}
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6">
                 <ActiveQuestsSection
                   quests={data.activeQuests}
                   onComplete={handleCompleteQuest}
@@ -629,7 +629,7 @@ const DashboardPage: React.FC = () => {
                       </span>
                     </div>
                     <ul className="space-y-2.5" role="list">
-                      {data.recentlyCompletedQuests.map((q) => (
+                      {data.recentlyCompletedQuests.slice(0, 4).map((q) => (
                         <li
                           key={q.id}
                           className="p-3 rounded-lg bg-rpg-surface-2/30 border border-emerald-500/20 hover:border-emerald-500/40 flex items-center justify-between gap-3 text-sm transition-all"
@@ -663,10 +663,12 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Right Column: Achievements Hall & Guild Chronicle Activity Feed */}
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6">
                 <AchievementsPreviewCard achievements={data.achievements} />
 
-                <RecentActivitySection activities={data.recentActivity} />
+                <div className="flex-1">
+                  <RecentActivitySection activities={data.recentActivity} />
+                </div>
               </div>
             </div>
           </div>

@@ -106,7 +106,7 @@ const RecentActivitySection: React.FC<RecentActivitySectionProps> = ({ activitie
   return (
     <section
       aria-label="Recent activity chronicle"
-      className="bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-5 sm:p-6 shadow-sm flex flex-col justify-between transition-all"
+      className="h-full bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-5 sm:p-6 shadow-sm flex flex-col justify-between transition-all"
     >
       <div>
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-rpg-border/40 gap-2 flex-wrap">
