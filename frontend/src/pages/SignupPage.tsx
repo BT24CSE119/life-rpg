@@ -2,6 +2,7 @@ import React, { useState, useId, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signup, checkUsername } from '../services/auth';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { healthCheck } from '../services/api';
 import type { ValidationError } from '../types';
 
 interface FormState {
@@ -41,6 +42,11 @@ const SignupPage: React.FC = () => {
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const checkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Warm up the Render backend the moment the signup page loads
+  useEffect(() => {
+    healthCheck().catch(() => {}); // silent — just wake the server
+  }, []);
 
   // Debounced check whenever username changes
   useEffect(() => {

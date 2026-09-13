@@ -1,7 +1,8 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { healthCheck } from '../services/api';
 import type { ValidationError } from '../types';
 
 interface FormState {
@@ -28,6 +29,12 @@ const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [slowRequest, setSlowRequest] = useState(false);
+
+  // Warm up the Render backend the moment the login page loads
+  // so the server is awake by the time the user hits submit.
+  useEffect(() => {
+    healthCheck().catch(() => {}); // silent — just wake the server
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

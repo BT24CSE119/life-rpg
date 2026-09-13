@@ -8,7 +8,7 @@ const BASE_URL = import.meta.env.VITE_API_URL
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 10_000,
+  timeout: 30_000, // 30s — accommodates Render free tier cold-start (~15s)
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true, // Required for HttpOnly refresh cookie
 });
