@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import type { Quest, QuestStatusType, QuestPriority, CreateQuestInput, UpdateQuestInput, RpgProfile } from '../types';
 import {
   getQuests as fetchQuests,
@@ -15,6 +16,7 @@ import LevelUpModal from '../components/LevelUpModal';
 import FloatingReward, { FloatingRewardItem } from '../components/FloatingReward';
 import { getRpgProfile } from '../services/rpg';
 import { useRpg } from '../context/RpgContext';
+import { triggerHaptic } from '../utils/haptics';
 
 // ── Filter Configs ────────────────────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ const QuestBoardPage: React.FC = () => {
   // Filters
   const [statusFilter, setStatusFilter] = useState<QuestStatusType | 'ALL'>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<QuestPriority | 'ALL'>('ALL');
+  const location = useLocation();
 
   // Instant in-memory filtered quests: zero skeleton wireframe delay when switching tabs
   const filteredQuests = useMemo(() => {
@@ -132,6 +135,13 @@ const QuestBoardPage: React.FC = () => {
   useEffect(() => {
     getRpgProfile().then(setProfile).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (location.hash === '#new-quest' || location.search.includes('new=true')) {
+      setEditingQuest(null);
+      setIsFormOpen(true);
+    }
+  }, [location.hash, location.search]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -225,6 +235,7 @@ const QuestBoardPage: React.FC = () => {
 
     // Instant floating reward with attribute bonus
     const rewardKey = Date.now();
+    triggerHaptic('success');
     setFloatingRewards((prev) => [
       ...prev,
       {
@@ -254,6 +265,7 @@ const QuestBoardPage: React.FC = () => {
       );
       if (!completed.duplicateCompletion) {
         if (completed.progression.levelUp) {
+          triggerHaptic('levelup');
           setLevelUpData({
             isOpen: true,
             newLevel: completed.progression.newLevel,

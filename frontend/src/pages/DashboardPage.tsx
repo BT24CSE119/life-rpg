@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import PageContainer from '../layouts/PageContainer';
 import RpgProgressCard from '../components/RpgProgressCard';
 import GoldBalanceCard from '../components/GoldBalanceCard';
@@ -19,6 +19,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getDashboardData } from '../services/dashboard';
 import { createQuest, completeQuest } from '../services/quest';
 import { completeDailyQuest } from '../services/dailyQuest';
+import { triggerHaptic } from '../utils/haptics';
 import type {
   DashboardData,
   DashboardQuestItem,
@@ -56,6 +57,7 @@ const getGreetingLore = (level: number): { title: string; quote: string } => {
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { syncFromDashboard, setGoldBalance, equippedCosmetics } = useRpg();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -109,6 +111,18 @@ const DashboardPage: React.FC = () => {
     fetchDashboard();
   }, [fetchDashboard]);
 
+  // Smooth scroll to target section when hash (e.g. #streak) is present
+  useEffect(() => {
+    if (!isLoading && location.hash) {
+      const el = document.getElementById(location.hash.replace('#', ''));
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    }
+  }, [isLoading, location.hash]);
+
   // Keyboard shortcut: Press 'N' to open New Quest modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -138,6 +152,7 @@ const DashboardPage: React.FC = () => {
 
     // Trigger instant floating reward
     const rewardKey = Date.now();
+    triggerHaptic('success');
     setFloatingRewards((prev) => [
       ...prev,
       {
@@ -174,6 +189,7 @@ const DashboardPage: React.FC = () => {
       if (!result.duplicateCompletion) {
         // If level up occurred, celebrate with LevelUpModal
         if (result.progression.levelUp) {
+          triggerHaptic('levelup');
           setLevelUpData({
             isOpen: true,
             newLevel: result.progression.newLevel,
@@ -219,6 +235,7 @@ const DashboardPage: React.FC = () => {
 
     // Trigger instant floating rewards badge animation
     const rewardKey = Date.now();
+    triggerHaptic('success');
     setFloatingRewards((prev) => [
       ...prev,
       {
@@ -422,12 +439,21 @@ const DashboardPage: React.FC = () => {
                       </svg>
                       {data.quests.active} Active Quest{data.quests.active !== 1 ? 's' : ''}
                     </span>
-                    <span className="text-orange-400 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-950/40 border border-orange-500/30 shadow-sm">
-                      <svg className="w-3.5 h-3.5 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <a
+                      href="#streak"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const el = document.getElementById('streak');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
+                      className="text-orange-400 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-950/40 border border-orange-500/30 hover:border-orange-400 hover:bg-orange-950/60 shadow-sm transition-all cursor-pointer group"
+                      title="Jump to streak details"
+                    >
+                      <svg className="w-3.5 h-3.5 text-orange-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
                       </svg>
                       {data.streak?.currentStreak ?? 0}-Day Streak
-                    </span>
+                    </a>
                     <span className="text-emerald-400 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 shadow-sm">
                       <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -455,7 +481,7 @@ const DashboardPage: React.FC = () => {
                     </button>
                     <Link
                       to="/shop"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-rpg-surface-2 border border-amber-500/30 hover:border-amber-400 text-amber-300 hover:brightness-110 active:scale-95 transition-all"
+                      className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-rpg-surface-2 border border-amber-500/30 hover:border-amber-400 text-amber-300 hover:brightness-110 active:scale-95 transition-all"
                     >
                       <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="9" />
@@ -465,7 +491,7 @@ const DashboardPage: React.FC = () => {
                     </Link>
                     <Link
                       to="/inventory"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-rpg-surface-2 border border-white/10 hover:border-cyan-400/40 text-rpg-text hover:text-cyan-300 active:scale-95 transition-all"
+                      className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-rpg-surface-2 border border-white/10 hover:border-cyan-400/40 text-rpg-text hover:text-cyan-300 active:scale-95 transition-all"
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
@@ -510,7 +536,7 @@ const DashboardPage: React.FC = () => {
                   onViewHistory={() => navigate('/rpg')}
                 />
               </div>
-              <div className="lg:col-span-1 h-full flex flex-col">
+              <div id="streak" className="lg:col-span-1 h-full flex flex-col scroll-mt-20">
                 <StreakCard streak={data.streak} />
               </div>
             </section>
@@ -527,8 +553,8 @@ const DashboardPage: React.FC = () => {
             {/* ── 4. Character Attributes (Full Width Hero Grid) ─────────── */}
             <AttributesCard attributes={data.attributes} />
 
-            {/* ── 5. Quest Metrics Summary Cards ──────────────────────────── */}
-            <section aria-label="Quest Metrics Overview">
+            {/* ── 5. Quest Metrics Summary Cards (Desktop Only — Bottom nav & quest tab already provide this on mobile) ──────────────────────────── */}
+            <section aria-label="Quest Metrics Overview" className="hidden md:block">
               <QuestSummaryCards summary={data.quests} />
             </section>
 
@@ -543,10 +569,10 @@ const DashboardPage: React.FC = () => {
                   completingId={completingId}
                 />
 
-                {/* Quick Navigation Directory */}
+                {/* Quick Navigation Directory — hidden on mobile since fixed bottom nav provides instant access */}
                 <nav
                   aria-label="Realm Directory Quick Navigation"
-                  className="bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-6 shadow-sm"
+                  className="hidden md:block bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-6 shadow-sm"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-display text-base font-bold text-rpg-text flex items-center gap-2">
@@ -599,6 +625,23 @@ const DashboardPage: React.FC = () => {
                       <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
                     </Link>
                     <Link
+                      to="/leaderboard"
+                      className="group flex items-center justify-between p-3 rounded-lg bg-rpg-surface-2/60 hover:bg-rpg-surface-2 border border-transparent hover:border-amber-500/30 transition-all text-xs font-semibold text-amber-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                          <path d="M4 22h16" />
+                          <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                          <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                        </svg>
+                        Guild Hall Room
+                      </span>
+                      <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+                    </Link>
+                    <Link
                       to="/achievements"
                       className="group flex items-center justify-between p-3 rounded-lg bg-rpg-surface-2/60 hover:bg-rpg-surface-2 border border-transparent hover:border-rpg-border transition-all text-xs font-semibold text-rpg-text hover:text-amber-300"
                     >
@@ -614,11 +657,11 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </nav>
 
-                {/* Recently Completed Quests */}
+                {/* Recently Completed Quests (Hidden on mobile to keep home uncluttered) */}
                 {data.recentlyCompletedQuests.length > 0 && (
                   <section
                     aria-label="Recently Completed Accomplishments"
-                    className="bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-6 shadow-sm"
+                    className="hidden md:block bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-xl p-6 shadow-sm"
                   >
                     <div className="flex items-center justify-between mb-4 pb-3 border-b border-rpg-border/40">
                       <h2 className="font-display text-lg font-bold text-rpg-text flex items-center gap-2">
@@ -664,7 +707,10 @@ const DashboardPage: React.FC = () => {
 
               {/* Right Column: Achievements Hall & Guild Chronicle Activity Feed */}
               <div className="flex flex-col gap-6">
-                <AchievementsPreviewCard achievements={data.achievements} />
+                {/* Achievements Preview hidden on mobile (accessible via Trophies/Achievements page and profile) */}
+                <div className="hidden md:block">
+                  <AchievementsPreviewCard achievements={data.achievements} />
+                </div>
 
                 <div className="flex-1">
                   <RecentActivitySection activities={data.recentActivity} />

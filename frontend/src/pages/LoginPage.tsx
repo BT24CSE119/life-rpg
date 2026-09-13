@@ -17,12 +17,19 @@ interface FieldErrors {
 }
 
 const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const baseId = useId();
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/dashboard';
+
+  // If already logged in, redirect straight to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const [form, setForm] = useState<FormState>({ email: '', password: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -91,14 +98,54 @@ const LoginPage: React.FC = () => {
       </div>
 
       <div className="relative w-full max-w-md">
+        {/* Top Back to Home Button */}
+        <div className="mb-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-rpg-text-muted hover:text-rpg-gold px-3 py-1.5 rounded-lg bg-rpg-surface/80 hover:bg-rpg-surface border border-rpg-border/60 hover:border-rpg-gold/40 transition-all shadow-sm"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to home
+          </Link>
+        </div>
+
         {/* Card */}
         <div className="bg-rpg-surface border border-rpg-border rounded-2xl p-8 shadow-2xl shadow-black/40">
 
-          {/* Header */}
+          {/* Header & RPG Emblem Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/50 border border-amber-500/40 text-amber-300 text-xs font-bold font-display uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(245,200,66,0.2)]">
-              <span>⚔️</span> Life RPG
+            <div className="flex flex-col items-center justify-center mb-5">
+              {/* Heraldic Crest Badge */}
+              <div className="relative mb-3 group">
+                <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-r from-amber-500/30 via-yellow-400/20 to-amber-600/30 blur-md group-hover:blur-lg transition-all duration-300" />
+                <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-b from-[#1c223a] via-[#121627] to-[#0c0e1a] border-2 border-amber-400/80 shadow-[0_4px_20px_rgba(245,200,66,0.35)] flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-amber-400 filter drop-shadow-[0_0_8px_rgba(245,200,66,0.6)]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+                    <path d="M13 19l6-6" />
+                    <path d="M2 2l6 6" />
+                    <path d="M20 16l2-2" />
+                    <path d="M16 20l2-2" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold font-display uppercase tracking-widest shadow-sm">
+                <span>LIFE RPG</span>
+                <span className="w-1 h-1 rounded-full bg-amber-400/60" />
+                <span className="text-[10px] text-amber-200/70 font-normal">REALM GATE</span>
+              </div>
             </div>
+
             <h1 className="font-display text-3xl font-bold text-rpg-text mb-1">
               Welcome Back
             </h1>
@@ -181,9 +228,22 @@ const LoginPage: React.FC = () => {
                   type="button"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-rpg-text-muted/60 hover:text-rpg-text-muted transition-colors text-lg"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-rpg-text-muted/50 hover:text-rpg-gold transition-colors p-1 rounded"
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? (
+                    // Eye-off icon
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    // Eye icon
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
                 </button>
               </div>
               {errors.password && (
@@ -236,16 +296,6 @@ const LoginPage: React.FC = () => {
               Create your character →
             </Link>
           </p>
-        </div>
-
-        {/* Back to home */}
-        <div className="text-center mt-5">
-          <Link
-            to="/"
-            className="text-xs text-rpg-text-muted/50 hover:text-rpg-text-muted transition-colors"
-          >
-            ← Back to home
-          </Link>
         </div>
       </div>
     </div>

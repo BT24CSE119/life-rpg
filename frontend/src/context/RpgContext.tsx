@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { useAuth } from '../hooks/useAuth';
 import { getWallet } from '../services/rpg';
 import { getUnreadNotificationCount } from '../services/notification';
+import { getStreak } from '../services/streak';
 import api from '../services/api';
 import type { DashboardData } from '../types';
 
@@ -27,6 +28,7 @@ interface RpgContextValue {
   refreshWallet: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
   refreshEquipped: () => Promise<void>;
+  refreshStreak: () => Promise<void>;
 }
 
 const RpgContext = createContext<RpgContextValue | undefined>(undefined);
@@ -82,6 +84,18 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isAuthenticated]);
 
+  const refreshStreak = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const streakInfo = await getStreak();
+      if (streakInfo && typeof streakInfo.currentStreak === 'number') {
+        setCurrentStreak(streakInfo.currentStreak);
+      }
+    } catch {
+      // Ignore streak fetch errors gracefully
+    }
+  }, [isAuthenticated]);
+
   const syncFromDashboard = useCallback((data: DashboardData) => {
     if (data.player) {
       setGoldBalance(data.player.goldBalance);
@@ -104,6 +118,7 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       refreshWallet();
       refreshNotifications();
       refreshEquipped();
+      refreshStreak();
     } else {
       setGoldBalance(null);
       setUnreadCount(0);
@@ -112,7 +127,7 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setEquippedCosmetics([]);
       setRealtimeConnected(false);
     }
-  }, [isAuthenticated, refreshWallet, refreshNotifications, refreshEquipped]);
+  }, [isAuthenticated, refreshWallet, refreshNotifications, refreshEquipped, refreshStreak]);
 
 
   // Real-Time Server-Sent Events (SSE) stream
@@ -274,6 +289,7 @@ export const RpgProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         refreshWallet,
         refreshNotifications,
         refreshEquipped,
+        refreshStreak,
       }}
     >
       {children}

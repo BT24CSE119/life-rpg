@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { RpgAttributes } from '../types';
 
 interface AttributesCardProps {
@@ -52,28 +52,43 @@ const ATTRIBUTE_CONFIG: Record<
 };
 
 const AttributesCard: React.FC<AttributesCardProps> = ({ attributes }) => {
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const keys = Object.keys(ATTRIBUTE_CONFIG) as Array<keyof RpgAttributes>;
 
   return (
     <section
-      className="rpg-hud-panel border border-rpg-border rounded-rpg-lg p-6 hover:border-rpg-gold/40 transition-all duration-300"
+      className="rpg-hud-panel border border-rpg-border rounded-rpg-lg p-4 sm:p-6 hover:border-rpg-gold/40 transition-all duration-300"
       aria-label="Character Attributes"
     >
-      <div className="flex items-center justify-between gap-4 mb-4">
+      <div className="flex items-center justify-between gap-4 mb-3 sm:mb-4">
         <div>
           <p className="text-[10px] uppercase tracking-widest text-rpg-gold font-bold">
             Core Character Sheet
           </p>
-          <h2 className="font-display text-xl font-bold text-rpg-text mt-0.5">
+          <h2 className="font-display text-lg sm:text-xl font-bold text-rpg-text mt-0.5">
             Character Attributes
           </h2>
         </div>
-        <span className="text-sm font-mono text-rpg-text-muted">
-          5 Core Stats
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Mobile toggle button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileExpanded((v) => !v)}
+            className="sm:hidden px-2.5 py-1 text-[11px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg flex items-center gap-1 active:scale-95 transition-all"
+            aria-expanded={isMobileExpanded}
+          >
+            <span>{isMobileExpanded ? 'Hide' : 'Show Stats'}</span>
+            <span className="text-xs transition-transform duration-200" style={{ transform: isMobileExpanded ? 'rotate(180deg)' : 'none' }}>
+              ▾
+            </span>
+          </button>
+          <span className="hidden sm:inline text-sm font-mono text-rpg-text-muted">
+            5 Core Stats
+          </span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-5 gap-2.5">
+      <div className={`${isMobileExpanded ? 'grid' : 'hidden sm:grid'} grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-5 gap-2.5`}>
         {keys.map((key) => {
           const item = ATTRIBUTE_CONFIG[key];
           const val = attributes[key] ?? 1;

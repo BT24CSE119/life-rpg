@@ -298,21 +298,10 @@ export const refreshSession = async (
   }
 
   // 3. Handle previously rotated or revoked token
-  // To prevent race conditions from concurrent tab loads or dev re-renders causing logout,
-  // we issue a new session rather than destructively revoking all user tokens.
   if (storedToken.isRevoked) {
-    const newAccessToken = generateAccessToken(storedToken.user.id, storedToken.user.role);
-    const newRawRefreshToken = generateRefreshToken(storedToken.user.id);
-
-    await prisma.refreshToken.create({
-      data: {
-        tokenHash: hashToken(newRawRefreshToken),
-        userId: storedToken.user.id,
-        expiresAt: getRefreshTokenExpiry(),
-      },
-    });
-
-    return { accessToken: newAccessToken, rawRefreshToken: newRawRefreshToken };
+    const err = new Error('Refresh token has been revoked') as Error & { statusCode: number };
+    err.statusCode = 401;
+    throw err;
   }
 
   // 4. Check expiry (belt-and-suspenders beyond JWT exp)

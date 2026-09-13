@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageContainer from './PageContainer';
 import RPGButton from '../components/RPGButton';
@@ -85,8 +85,11 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout, isLoading } = useAuth();
-  const { goldBalance, unreadCount, realtimeConnected, equippedCosmetics } = useRpg();
+  const { goldBalance, currentStreak, unreadCount, realtimeConnected, equippedCosmetics } = useRpg();
   const isLanding = location.pathname === '/';
+
+  const mobileNavRef = useRef<HTMLDivElement>(null);
+  const hamburgerBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -97,6 +100,39 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     setMobileOpen(false);
   }, [location]);
+
+  // Close mobile menu when clicking/touching outside or pressing Escape
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const handleClickOrTouchOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      // If tap is inside the menu or on the hamburger button itself, ignore
+      if (
+        mobileNavRef.current?.contains(target) ||
+        hamburgerBtnRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setMobileOpen(false);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOrTouchOutside);
+    document.addEventListener('touchstart', handleClickOrTouchOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOrTouchOutside);
+      document.removeEventListener('touchstart', handleClickOrTouchOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileOpen]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -115,10 +151,12 @@ const Navbar: React.FC = () => {
           className="flex items-center justify-between h-16"
           aria-label="Main navigation"
         >
-          {/* ── Mobile: Hamburger (left) ──────────────────────────────── */}
-          <div className="flex items-center md:hidden">
+          {/* ── Left side: Hamburger + Logo grouped together ──────────── */}
+          <div className="flex items-center gap-2">
+            {/* Hamburger — mobile only */}
             <button
-              className="flex flex-col gap-1.5 p-2 rounded-lg hover:bg-rpg-surface-2 border border-rpg-border/40 transition-colors"
+              ref={hamburgerBtnRef}
+              className="flex flex-col gap-1.5 p-2 rounded-lg hover:bg-rpg-surface-2 border border-rpg-border/40 transition-colors md:hidden"
               onClick={() => setMobileOpen((o) => !o)}
               aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={mobileOpen}
@@ -140,21 +178,21 @@ const Navbar: React.FC = () => {
                 }`}
               />
             </button>
-          </div>
 
-          {/* Logo — centered on mobile, left on desktop */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 group relative py-1 absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0"
-            aria-label="Life RPG — Home"
-          >
-            <span className="text-rpg-gold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-              <SwordIcon className="w-6 h-6" />
-            </span>
-            <span className="font-display text-xl font-black text-gold-gradient tracking-wide group-hover:brightness-110 transition-all">
-              Life RPG
-            </span>
-          </Link>
+            {/* Logo */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 group relative py-1"
+              aria-label="Life RPG — Home"
+            >
+              <span className="text-rpg-gold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                <SwordIcon className="w-6 h-6" />
+              </span>
+              <span className="font-display text-xl font-black text-gold-gradient tracking-wide group-hover:brightness-110 transition-all">
+                Life RPG
+              </span>
+            </Link>
+          </div>
 
           {/* Desktop nav links */}
           <div className="hidden lg:flex items-center gap-1.5" role="list">
@@ -264,7 +302,21 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-3">
             {!isLoading && isAuthenticated ? (
               <>
-
+                {typeof currentStreak === 'number' && (
+                  <Link
+                    to="/dashboard#streak"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:border-orange-400 hover:bg-orange-500/25 transition-all shadow-[0_0_10px_rgba(249,115,22,0.2)] group"
+                    title="View Streak Details"
+                  >
+                    <span className="text-sm group-hover:scale-110 transition-transform">🔥</span>
+                    <span>{currentStreak}d</span>
+                  </Link>
+                )}
+                {typeof goldBalance === 'number' && (
+                  <Link to="/shop" title="Guild Shop & Gold">
+                    <GoldBadge amount={goldBalance} size="sm" />
+                  </Link>
+                )}
                 <NotificationCenter initialUnreadCount={unreadCount} />
                 <UserMenuDropdown />
               </>
@@ -284,10 +336,20 @@ const Navbar: React.FC = () => {
             ) : null}
           </div>
 
-          {/* ── Mobile: Profile + Bell (right) — replaces old mobile controls ── */}
-          <div className="flex items-center gap-2 md:hidden">
+          {/* ── Mobile: Streak + Bell + Profile (right) ── */}
+          <div className="flex items-center gap-1.5 md:hidden">
             {isAuthenticated && (
               <>
+                {typeof currentStreak === 'number' && (
+                  <Link
+                    to="/dashboard#streak"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-all"
+                    title="Streak"
+                  >
+                    <span className="text-xs">🔥</span>
+                    <span>{currentStreak}d</span>
+                  </Link>
+                )}
                 <NotificationCenter initialUnreadCount={unreadCount} />
                 <UserMenuDropdown />
               </>
@@ -303,112 +365,125 @@ const Navbar: React.FC = () => {
           </div>
         </nav>
 
-        {/* Mobile menu */}
+        {/* Mobile menu — Professional 2/3 width slide-out left drawer */}
         {mobileOpen && (
-          <div
-            id="mobile-menu"
-            className="md:hidden pb-4 pt-2 border-t border-rpg-border/50 bg-rpg-surface/95 backdrop-blur-md rounded-b-xl px-2 shadow-2xl animate-card-enter"
-            role="navigation"
-            aria-label="Mobile navigation"
-          >
-            <div className="flex flex-col gap-1">
-              {isLanding && !isAuthenticated && NAV_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="px-3 py-2.5 text-sm text-rpg-text-muted hover:text-rpg-gold hover:bg-rpg-surface-2 rounded-lg transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </a>
-              ))}
-              {isAuthenticated && (
-                <>
+          <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
+            {/* Backdrop overlay — tap anywhere to close */}
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+              onClick={() => setMobileOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Left Drawer Container (2/3 width, max-w-xs, full height) */}
+            <div
+              ref={mobileNavRef}
+              id="mobile-menu"
+              className="relative z-50 w-3/4 max-w-xs h-full bg-[#0d101d] border-r border-amber-500/20 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col justify-between p-5 animate-slide-in-left overflow-y-auto"
+              role="navigation"
+              aria-label="Mobile navigation"
+            >
+              <div>
+                {/* Drawer Header: Logo + Close Button */}
+                <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
                   <Link
-                    to="/dashboard"
+                    to="/"
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                      isActive('/dashboard') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
-                    }`}
+                    className="flex items-center gap-2 group"
                   >
-                    <HomeIcon /> Dashboard
-                  </Link>
-                  <Link
-                    to="/quests"
-                    onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                      isActive('/quests') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
-                    }`}
-                  >
-                    <ScrollIcon /> Quests
-                  </Link>
-                  <Link
-                    to="/inventory"
-                    onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                      isActive('/inventory') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
-                    }`}
-                  >
-                    <BagIcon /> Inventory
-                  </Link>
-                  <Link
-                    to="/shop"
-                    onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-between ${
-                      isActive('/shop') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-amber-400 hover:text-amber-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <CoinIcon className="w-4 h-4 text-amber-400" />
-                      <span>Guild Bazaar</span>
-                    </div>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
-                      SHOP
+                    <span className="text-amber-400">
+                      <SwordIcon className="w-5 h-5" />
+                    </span>
+                    <span className="font-display text-lg font-black text-gold-gradient tracking-wide">
+                      Life RPG
                     </span>
                   </Link>
-                  <Link
-                    to="/achievements"
+
+                  <button
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                      isActive('/achievements') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
-                    }`}
+                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center text-sm transition-all"
+                    aria-label="Close sidebar"
                   >
-                    <TrophyIcon /> Trophies & Achievements
-                  </Link>
+                    ✕
+                  </button>
+                </div>
+
+                {/* Authenticated User Status Snippet */}
+                {isAuthenticated && (
+                  <div className="p-3 mb-5 rounded-xl bg-gradient-to-r from-amber-950/40 to-rpg-surface border border-amber-500/30 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center font-mono font-bold text-xs text-amber-300">
+                        {user?.username?.substring(0, 2).toUpperCase() || 'LV'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-display font-bold text-xs text-rpg-text truncate">
+                          {user?.username}
+                        </p>
+                        <p className="text-[10px] font-mono text-amber-400">
+                          {currentStreak ?? 0}d Streak
+                        </p>
+                      </div>
+                    </div>
+                    {typeof goldBalance === 'number' && (
+                      <GoldBadge amount={goldBalance} size="sm" />
+                    )}
+                  </div>
+                )}
+
+                {/* Navigation Links */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                    Explore Realms
+                  </div>
+
                   <Link
                     to="/leaderboard"
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                      isActive('/leaderboard') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                    className={`px-3 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-3 ${
+                      isActive('/leaderboard')
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
-                      <path d="M18 8h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4" />
-                      <circle cx="8" cy="12" r="2" />
+                    <svg className="w-4 h-4 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    Hall of Champions (Leaderboard)
+                    Guild Hall & Roster
                   </Link>
+
                   <Link
-                    to="/rpg"
+                    to="/achievements"
                     onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                      isActive('/rpg') ? 'bg-amber-950/40 text-amber-300 font-bold' : 'text-rpg-text-muted hover:text-rpg-gold'
+                    className={`px-3 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-3 ${
+                      isActive('/achievements')
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <ChartIcon /> Character Progression
+                    <TrophyIcon className="w-4 h-4 text-yellow-400 shrink-0" />
+                    Trophies & Feats
                   </Link>
-                </>
-              )}
-              <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-rpg-border/50">
-                {isAuthenticated ? (
-                  <RPGButton variant="ghost" size="sm" fullWidth
-                    onClick={async () => { setMobileOpen(false); await logout(); navigate('/'); }}
-                  >
-                    Logout
-                  </RPGButton>
-                ) : (
-                  <>
+
+                  {isLanding && !isAuthenticated && NAV_LINKS.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      className="px-3 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-colors font-medium"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="pt-4 border-t border-white/10">
+                {!isAuthenticated ? (
+                  <div className="flex flex-col gap-2">
                     <Link to="/login" onClick={() => setMobileOpen(false)}>
                       <RPGButton variant="ghost" size="sm" fullWidth>
                         Login
@@ -419,7 +494,27 @@ const Navbar: React.FC = () => {
                         Begin Your Quest
                       </RPGButton>
                     </Link>
-                  </>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setMobileOpen(false);
+                        await logout();
+                        navigate('/');
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/15 border border-red-500/30 transition-all"
+                    >
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      <span>Depart Realm (Sign Out)</span>
+                    </button>
+                    <p className="text-[10px] font-mono text-slate-500 text-center">
+                      Life RPG v1.0 · Realm Co-Working
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
