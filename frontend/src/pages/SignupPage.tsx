@@ -34,6 +34,7 @@ const SignupPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [slowRequest, setSlowRequest] = useState(false);
 
   // Real-time username availability & suggestions state
   const [usernameChecking, setUsernameChecking] = useState(false);
@@ -141,6 +142,8 @@ const SignupPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setSlowRequest(false);
+    const slowTimer = setTimeout(() => setSlowRequest(true), 3000);
     try {
       await signup({
         username: trimmedUsername,
@@ -177,6 +180,8 @@ const SignupPage: React.FC = () => {
         setErrors({ general: apiError?.message ?? error.message ?? 'Signup failed. Please try again.' });
       }
     } finally {
+      clearTimeout(slowTimer);
+      setSlowRequest(false);
       setIsSubmitting(false);
     }
   };
@@ -411,8 +416,8 @@ const SignupPage: React.FC = () => {
             >
               {isSubmitting ? (
                 <>
-                  <span className="animate-spin text-base" aria-hidden="true">⚙️</span>
-                  Forging your destiny…
+                  <span className="inline-block w-4 h-4 border-2 border-rpg-bg/40 border-t-rpg-bg rounded-full animate-spin" aria-hidden="true" />
+                  {slowRequest ? 'Server is waking up… (~15s)' : 'Forging your destiny…'}
                 </>
               ) : (
                 <>🛡️ Begin Your Adventure</>

@@ -164,7 +164,11 @@ export const signupUser = async (
     where: { email: normalizedEmail },
   });
   if (existing) {
-    const err = new Error('An account with this email already exists') as Error & { statusCode: number };
+    // If the account was created via Google, give a helpful specific message
+    const message = existing.googleId && !existing.passwordHash
+      ? 'This email is already registered via Google Sign-In. Please use "Continue with Google" to log in.'
+      : 'An account with this email already exists. Please log in instead.';
+    const err = new Error(message) as Error & { statusCode: number };
     err.statusCode = 409;
     throw err;
   }
@@ -224,8 +228,15 @@ export const loginUser = async (
     where: { email: normalizedEmail },
   });
 
-  if (!user || !user.passwordHash) {
-    const err = new Error(GENERIC_ERROR) as Error & { statusCode: number };
+  // User exists but was created via Google — no password set
+  if (user && !user.passwordHash) {
+    const err = new Error('This account was created with Google Sign-In. Please use the "Continue with Google" button to log in.') as Error & { statusCode: number };
+    err.statusCode = 401;
+    throw err;
+  }
+
+  if (!user) {
+    const err = new Error('No account found with this email. Please sign up first.') as Error & { statusCode: number };
     err.statusCode = 401;
     throw err;
   }

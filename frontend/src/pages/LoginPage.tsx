@@ -27,6 +27,7 @@ const LoginPage: React.FC = () => {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [slowRequest, setSlowRequest] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,6 +39,7 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setSlowRequest(false);
 
     // Basic client-side validation
     const newErrors: FieldErrors = {};
@@ -49,6 +51,8 @@ const LoginPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    // After 3s, hint that the server may be waking up (Render free tier cold start)
+    const slowTimer = setTimeout(() => setSlowRequest(true), 3000);
     try {
       await login({ email: form.email, password: form.password });
       navigate(from, { replace: true });
@@ -65,6 +69,8 @@ const LoginPage: React.FC = () => {
         setErrors({ general: apiError?.message ?? error.message ?? 'Login failed. Please check your credentials.' });
       }
     } finally {
+      clearTimeout(slowTimer);
+      setSlowRequest(false);
       setIsSubmitting(false);
     }
   };
@@ -189,8 +195,8 @@ const LoginPage: React.FC = () => {
             >
               {isSubmitting ? (
                 <>
-                  <span className="animate-spin text-base" aria-hidden="true">⚙️</span>
-                  Entering the realm…
+                  <span className="inline-block w-4 h-4 border-2 border-rpg-bg/40 border-t-rpg-bg rounded-full animate-spin" aria-hidden="true" />
+                  {slowRequest ? 'Server is waking up… (~15s)' : 'Entering the realm…'}
                 </>
               ) : (
                 <>⚔️ Enter the Realm</>
