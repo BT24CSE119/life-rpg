@@ -131,7 +131,7 @@ const Navbar: React.FC = () => {
 
           {/* Desktop nav links */}
           <div className="hidden lg:flex items-center gap-1.5" role="list">
-            {isLanding && NAV_LINKS.map((link) => (
+            {isLanding && !isAuthenticated && NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
@@ -301,7 +301,7 @@ const Navbar: React.FC = () => {
             aria-label="Mobile navigation"
           >
             <div className="flex flex-col gap-1">
-              {isLanding && NAV_LINKS.map((link) => (
+              {isLanding && !isAuthenticated && NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}

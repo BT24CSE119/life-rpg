@@ -224,30 +224,24 @@ const QuestFormModal: React.FC<QuestFormModalProps> = ({
                 Awards +1 to stat on completion
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {CATEGORY_OPTIONS.map((cat) => (
                 <button
                   key={cat.value}
                   type="button"
                   onClick={() => setCategory(cat.value)}
                   disabled={isLoading}
-                  className={`p-2.5 rounded-rpg text-left border transition-all disabled:opacity-50 flex flex-col justify-between ${
+                  className={`p-2 rounded-rpg text-center border transition-all disabled:opacity-50 flex flex-col items-center gap-1 ${
                     category === cat.value
                       ? 'bg-amber-950/40 text-amber-300 border-amber-500/50 shadow-[0_0_12px_rgba(245,200,66,0.15)] ring-1 ring-amber-500/40'
                       : 'bg-rpg-bg text-rpg-text-muted border-rpg-border hover:border-rpg-border-2'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="text-sm font-bold flex items-center gap-1 text-rpg-text">
-                      <span aria-hidden="true">{cat.icon}</span> {cat.label}
-                    </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">
-                      {cat.stat}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-rpg-text-muted/70 leading-tight">
-                    {cat.desc}
-                  </p>
+                  <span className="text-base" aria-hidden="true">{cat.icon}</span>
+                  <span className="text-[11px] font-bold text-rpg-text leading-tight">{cat.label}</span>
+                  <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">
+                    {cat.stat}
+                  </span>
                 </button>
               ))}
             </div>
